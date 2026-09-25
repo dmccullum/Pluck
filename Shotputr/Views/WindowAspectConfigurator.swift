@@ -5,6 +5,7 @@ import SwiftUI
 struct WindowAspectConfigurator: NSViewRepresentable {
     let aspectRatio: Double
     let hasVideo: Bool
+    let controlsVisible: Bool
     let presentationID: UUID
     let onPresentationReady: (UUID) -> Void
 
@@ -31,11 +32,11 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func applyConfiguration(to window: NSWindow, coordinator: Coordinator) {
-        configureStandardTitlebar(window)
-
         if hasVideo, aspectRatio.isFinite, aspectRatio > 0 {
+            configureVideoTitlebar(window, coordinator: coordinator)
             configureVideoWindow(window, aspectRatio: CGFloat(aspectRatio), coordinator: coordinator)
         } else {
+            configureStandardTitlebar(window, coordinator: coordinator)
             configureDropWindow(window, coordinator: coordinator)
             coordinator.configuredAspectRatio = nil
             coordinator.configuredPresentationID = nil
@@ -43,11 +44,57 @@ struct WindowAspectConfigurator: NSViewRepresentable {
         }
     }
 
-    private func configureStandardTitlebar(_ window: NSWindow) {
-        window.styleMask.remove(.fullSizeContentView)
+    private func configureStandardTitlebar(_ window: NSWindow, coordinator: Coordinator) {
+        if window.styleMask.contains(.fullSizeContentView) {
+            window.styleMask.remove(.fullSizeContentView)
+        }
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = false
         window.titlebarSeparatorStyle = .automatic
+        coordinator.chromeVisible = nil
+        for button in windowButtons(in: window) {
+            button.isHidden = false
+            button.isEnabled = true
+            button.alphaValue = 1
+        }
+    }
+
+    private func configureVideoTitlebar(_ window: NSWindow, coordinator: Coordinator) {
+        if !window.styleMask.contains(.fullSizeContentView) {
+            window.styleMask.insert(.fullSizeContentView)
+        }
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
+
+        guard coordinator.chromeVisible != controlsVisible else { return }
+        coordinator.chromeVisible = controlsVisible
+        let buttons = windowButtons(in: window)
+        for button in buttons {
+            if controlsVisible {
+                if button.isHidden { button.alphaValue = 0 }
+                button.isHidden = false
+            }
+            button.isEnabled = controlsVisible
+        }
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.22
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            for button in buttons {
+                button.animator().alphaValue = controlsVisible ? 1 : 0
+            }
+        } completionHandler: {
+            DispatchQueue.main.async {
+                guard coordinator.chromeVisible == false else { return }
+                for button in buttons { button.isHidden = true }
+            }
+        }
+    }
+
+    private func windowButtons(in window: NSWindow) -> [NSButton] {
+        [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton]
+            .compactMap { window.standardWindowButton($0) }
     }
 
     private func configureVideoWindow(_ window: NSWindow, aspectRatio: CGFloat, coordinator: Coordinator) {
@@ -165,6 +212,7 @@ struct WindowAspectConfigurator: NSViewRepresentable {
         var configuredAspectRatio: CGFloat?
         var configuredPresentationID: UUID?
         var configuredForDropState = false
+        var chromeVisible: Bool?
         var transitionGeneration = 0
     }
 }

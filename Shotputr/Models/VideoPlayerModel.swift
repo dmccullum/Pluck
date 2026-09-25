@@ -12,11 +12,13 @@ final class VideoPlayerModel: ObservableObject {
     @Published private(set) var duration: Double = 0
     @Published private(set) var videoAspectRatio: Double = 16.0 / 9.0
     @Published var currentTime: Double = 0
-    @Published private(set) var isPlaying = false
+    @Published private(set) var shuttleRate: Float = 0
+    @Published private(set) var controlsVisible = true
+    @Published private(set) var isScrubbing = false
     @Published private(set) var isLoading = false
     @Published private(set) var isPresentationReady = false
     @Published private(set) var presentationID = UUID()
-    @Published private(set) var isCapturing = false
+    @Published private(set) var frameOperation: FrameOperation?
     @Published var alertMessage: String?
     @Published private(set) var toastMessage: String?
     @Published private(set) var overlayImage: NSImage?
@@ -31,8 +33,8 @@ final class VideoPlayerModel: ObservableObject {
     private var timeControlCancellable: AnyCancellable?
     private var presentationSizeCancellable: AnyCancellable?
     private var securityScopedURL: URL?
-    private var isScrubbing = false
-    private var wasPlayingBeforeScrub = false
+    private var rateBeforeScrub: Float = 0
+    private var manualShuttleTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
     private var overlaySecurityScopedURL: URL?
@@ -41,8 +43,17 @@ final class VideoPlayerModel: ObservableObject {
     var documentOpener: ((URL) -> Void)?
 
     var hasVideo: Bool { player != nil && videoURL != nil }
+    var isPlaying: Bool { shuttleRate != 0 }
     var hasOverlay: Bool { overlayImage != nil && overlayURL != nil }
     var overlayName: String? { overlayURL?.lastPathComponent }
+    var isCapturing: Bool { frameOperation != nil }
+    var isSavingFrame: Bool { frameOperation == .save }
+    var isCopyingFrame: Bool { frameOperation == .copy }
+
+    func setControlsVisible(_ visible: Bool) {
+        guard controlsVisible != visible else { return }
+        controlsVisible = visible
+    }
 
     init() {
         let defaults = UserDefaults.standard
@@ -142,6 +153,7 @@ final class VideoPlayerModel: ObservableObject {
         player?.pause()
         isLoading = true
         isPresentationReady = false
+        setControlsVisible(true)
         alertMessage = nil
 
         loadTask = Task { [weak self] in
@@ -255,10 +267,10 @@ final class VideoPlayerModel: ObservableObject {
 
         timeControlCancellable = player.publisher(for: \.rate)
             .receive(on: DispatchQueue.main)
-            .map { $0 > 0 }
             .removeDuplicates()
-            .sink { [weak self] isPlaying in
-                self?.isPlaying = isPlaying
+            .sink { [weak self] rate in
+                guard let self, self.manualShuttleTask == nil else { return }
+                self.shuttleRate = rate
             }
 
         presentationSizeCancellable = item.publisher(for: \.presentationSize)
@@ -271,7 +283,7 @@ final class VideoPlayerModel: ObservableObject {
     }
 
     private func tearDownPlayer() {
-        player?.pause()
+        stopPlayback()
         if let timeObserver, let player {
             player.removeTimeObserver(timeObserver)
         }
@@ -289,33 +301,101 @@ final class VideoPlayerModel: ObservableObject {
     }
 
     func togglePlayback() {
-        guard let player else { return }
-        if player.rate > 0 {
-            player.pause()
+        guard player != nil else { return }
+        if isPlaying {
+            stopPlayback()
         } else {
-            if currentTime >= duration - frameDuration {
-                seek(to: 0)
-            }
-            player.play()
+            setShuttleRate(1)
         }
     }
 
     func stopPlayback() {
+        manualShuttleTask?.cancel()
+        manualShuttleTask = nil
         player?.pause()
-        isPlaying = false
+        shuttleRate = 0
+    }
+
+    func shuttleBackward() {
+        let speed = shuttleRate < 0 ? min(abs(shuttleRate) * 2, 8) : 1
+        setShuttleRate(-speed)
+    }
+
+    func shuttleForward() {
+        let speed = shuttleRate > 0 ? min(shuttleRate * 2, 8) : 1
+        setShuttleRate(speed)
+    }
+
+    private func setShuttleRate(_ rate: Float) {
+        guard let player, let item = player.currentItem else { return }
+        if rate < 0, currentTime <= 0 { stopPlayback(); return }
+        if rate > 0, currentTime >= duration - frameDuration { seek(to: 0) }
+
+        manualShuttleTask?.cancel()
+        manualShuttleTask = nil
+
+        let canPlayNatively = rate > 0
+            ? (rate <= 1 || item.canPlayFastForward)
+            : (rate >= -1 ? item.canPlayReverse : item.canPlayFastReverse)
+        if canPlayNatively {
+            player.playImmediately(atRate: rate)
+        } else {
+            player.pause()
+            startManualShuttle(at: rate)
+        }
+        shuttleRate = rate
+    }
+
+    private func startManualShuttle(at rate: Float) {
+        manualShuttleTask = Task { [weak self] in
+            guard let self else { return }
+            var position = self.currentTime
+            var previousTick = ProcessInfo.processInfo.systemUptime
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(33))
+                guard !Task.isCancelled else { return }
+                let now = ProcessInfo.processInfo.systemUptime
+                position += (now - previousTick) * Double(rate)
+                previousTick = now
+                if position <= 0 || position >= self.duration {
+                    self.seek(to: min(max(0, position), max(0, self.duration - self.frameDuration)))
+                    self.stopPlayback()
+                    return
+                }
+                self.seek(to: position)
+            }
+        }
     }
 
     func stepFrame(by count: Int) {
         guard player != nil else { return }
-        player?.pause()
+        stopPlayback()
         seek(to: currentTime + (Double(count) * frameDuration))
     }
 
+    func seekBy(_ seconds: Double) {
+        guard player != nil else { return }
+        stopPlayback()
+        seek(to: currentTime + seconds)
+    }
+
+    func seekToStart() {
+        guard player != nil else { return }
+        stopPlayback()
+        seek(to: 0)
+    }
+
+    func seekToEnd() {
+        guard player != nil else { return }
+        stopPlayback()
+        seek(to: max(0, duration - frameDuration))
+    }
+
     func beginScrubbing() {
-        guard let player else { return }
+        guard player != nil else { return }
         isScrubbing = true
-        wasPlayingBeforeScrub = player.rate > 0
-        player.pause()
+        rateBeforeScrub = shuttleRate
+        stopPlayback()
     }
 
     func scrub(to seconds: Double) {
@@ -325,9 +405,10 @@ final class VideoPlayerModel: ObservableObject {
 
     func endScrubbing() {
         isScrubbing = false
-        if wasPlayingBeforeScrub {
-            player?.play()
+        if rateBeforeScrub != 0 {
+            setShuttleRate(rateBeforeScrub)
         }
+        rateBeforeScrub = 0
     }
 
     private func seek(to seconds: Double) {
@@ -341,16 +422,24 @@ final class VideoPlayerModel: ObservableObject {
     }
 
     func captureCurrentFrame() {
-        guard !isCapturing, let asset, let videoURL else { return }
+        processCurrentFrame(for: .save)
+    }
+
+    func copyCurrentFrame() {
+        processCurrentFrame(for: .copy)
+    }
+
+    private func processCurrentFrame(for operation: FrameOperation) {
+        guard frameOperation == nil, let asset, let videoURL else { return }
 
         let fallbackCaptureTime = CMTime(
             seconds: mediaStartTime.seconds + currentTime,
             preferredTimescale: 60_000
         )
-        let captureTime = player?.currentTime() ?? fallbackCaptureTime
+        let captureTime = player?.rate == 0 ? fallbackCaptureTime : (player?.currentTime() ?? fallbackCaptureTime)
         let relativeCaptureSeconds = captureTime.seconds - mediaStartTime.seconds
         let captureSeconds = relativeCaptureSeconds.isFinite ? max(0, relativeCaptureSeconds) : currentTime
-        isCapturing = true
+        frameOperation = operation
         alertMessage = nil
 
         Task { [weak self] in
@@ -363,13 +452,32 @@ final class VideoPlayerModel: ObservableObject {
 
                 let (image, _) = try await generator.image(at: captureTime)
                 let capturedImage = try self.applyingOverlay(to: image)
-                try self.save(image: capturedImage, videoURL: videoURL, seconds: captureSeconds)
-                self.isCapturing = false
+                switch operation {
+                case .save:
+                    try self.save(image: capturedImage, videoURL: videoURL, seconds: captureSeconds)
+                case .copy:
+                    try self.copy(image: capturedImage)
+                }
+                self.frameOperation = nil
             } catch {
-                self.isCapturing = false
-                self.alertMessage = "The frame couldn’t be saved. \(error.localizedDescription)"
+                self.frameOperation = nil
+                let verb = operation == .copy ? "copied" : "saved"
+                self.alertMessage = "The frame couldn’t be \(verb). \(error.localizedDescription)"
             }
         }
+    }
+
+    private func copy(image: CGImage) throws {
+        let pasteboard = NSPasteboard.general
+        let clipboardImage = NSImage(
+            cgImage: image,
+            size: NSSize(width: image.width, height: image.height)
+        )
+        pasteboard.clearContents()
+        guard pasteboard.writeObjects([clipboardImage]) else {
+            throw PlayerError.couldNotCopy
+        }
+        showToast("Frame copied to clipboard")
     }
 
     private func save(image: CGImage, videoURL: URL, seconds: Double) throws {
@@ -394,7 +502,6 @@ final class VideoPlayerModel: ObservableObject {
             panel.allowedContentTypes = [format.contentType]
             panel.canCreateDirectories = true
             guard panel.runModal() == .OK, let selectedURL = panel.url else {
-                isCapturing = false
                 return
             }
             outputURL = selectedURL
@@ -571,10 +678,16 @@ final class VideoPlayerModel: ObservableObject {
     }
 }
 
+enum FrameOperation {
+    case save
+    case copy
+}
+
 private enum PlayerError: LocalizedError {
     case notPlayable
     case noVideoTrack
     case couldNotEncode
+    case couldNotCopy
     case overlayMustBePNG
     case invalidOverlay
     case couldNotCompositeOverlay
@@ -584,6 +697,7 @@ private enum PlayerError: LocalizedError {
         case .notPlayable: "The file is not playable."
         case .noVideoTrack: "The file has no video track."
         case .couldNotEncode: "The image could not be encoded in the selected format."
+        case .couldNotCopy: "The clipboard did not accept the image."
         case .overlayMustBePNG: "Choose a PNG file."
         case .invalidOverlay: "The overlay image is invalid."
         case .couldNotCompositeOverlay: "The overlay could not be composited onto the frame."

@@ -1,3 +1,4 @@
+import AppKit
 import AVFoundation
 import SwiftUI
 
@@ -5,38 +6,91 @@ struct PlayerScreen: View {
     @ObservedObject var model: VideoPlayerModel
     let player: AVPlayer
 
-    @State private var controlsVisible = true
     @State private var hideControlsTask: Task<Void, Never>?
+    @State private var isOverlayPopoverPresented = false
+    @State private var isPointerInside = false
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 VideoCanvas(model: model, player: player)
-                controlsLayer(compact: proxy.size.width < 520)
+                PointerTrackingView(
+                    onActivity: {
+                        isPointerInside = true
+                        showControls(andScheduleHide: true)
+                    },
+                    onExit: {
+                        isPointerInside = false
+                        hideControlsNow()
+                    },
+                    onFrameStep: { count in
+                        model.stepFrame(by: count)
+                    }
+                )
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                controlsLayer(compact: proxy.size.width < 760)
+                topChrome
             }
         }
         .background(.black)
-        .animation(.easeOut(duration: 0.18), value: controlsVisible)
-        .onContinuousHover { phase in
-            switch phase {
-            case .active:
-                showControls(andScheduleHide: model.isPlaying)
-            case .ended:
-                scheduleControlsHideIfPlaying()
+        .ignoresSafeArea(edges: .top)
+        .animation(.easeOut(duration: 0.22), value: model.controlsVisible)
+        .onChange(of: model.isPlaying) { _, _ in
+            showControls(andScheduleHide: true)
+        }
+        .onChange(of: model.isScrubbing) { _, isScrubbing in
+            if isScrubbing {
+                showControls(andScheduleHide: false)
+            } else {
+                hideControlsAfterInteraction()
             }
         }
-        .onChange(of: model.isPlaying) { _, isPlaying in
-            if isPlaying {
-                scheduleControlsHideIfPlaying()
+        .onChange(of: isOverlayPopoverPresented) { _, isPresented in
+            if isPresented {
+                showControls(andScheduleHide: false)
             } else {
-                hideControlsTask?.cancel()
-                controlsVisible = true
+                hideControlsAfterInteraction()
             }
+        }
+        .onChange(of: model.frameOperation) { _, operation in
+            if operation == nil {
+                hideControlsAfterInteraction()
+            } else {
+                showControls(andScheduleHide: false)
+            }
+        }
+        .onAppear {
+            showControls(andScheduleHide: true)
         }
         .onDisappear {
             hideControlsTask?.cancel()
+            model.setControlsVisible(true)
         }
-        .environment(\.playerControlsVisible, controlsVisible)
+        .environment(\.playerControlsVisible, model.controlsVisible)
+    }
+
+    private var topChrome: some View {
+        VStack {
+            Text(model.videoURL?.lastPathComponent ?? "Shotgrabber")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.92))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 90)
+                .padding(.top, 7)
+                .padding(.bottom, 38)
+                .background {
+                    LinearGradient(
+                        colors: [.black.opacity(0.48), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+            Spacer()
+        }
+        .opacity(model.controlsVisible ? 1 : 0)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder
@@ -46,14 +100,14 @@ struct PlayerScreen: View {
                 Spacer()
 
                 HStack {
-                    OverlayButton(model: model)
+                    OverlayButton(model: model, isPopoverPresented: $isOverlayPopoverPresented)
                     Spacer()
-                    CaptureButton(model: model)
+                    FrameActionButtons(model: model)
                 }
                 .padding(.horizontal, 18)
 
                 PlaybackHUD(model: model)
-                    .frame(maxWidth: 480)
+                    .frame(maxWidth: 500)
                     .padding(.horizontal, 14)
             }
             .padding(.bottom, 16)
@@ -62,7 +116,7 @@ struct PlayerScreen: View {
                 VStack {
                     Spacer()
                     PlaybackHUD(model: model)
-                        .frame(maxWidth: 480)
+                        .frame(maxWidth: 440)
                         .padding(.horizontal, 76)
                         .padding(.bottom, 24)
                 }
@@ -70,7 +124,7 @@ struct PlayerScreen: View {
                 VStack {
                     Spacer()
                     HStack {
-                        OverlayButton(model: model)
+                        OverlayButton(model: model, isPopoverPresented: $isOverlayPopoverPresented)
                         Spacer()
                     }
                     .padding(.leading, 24)
@@ -81,7 +135,7 @@ struct PlayerScreen: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        CaptureButton(model: model)
+                        FrameActionButtons(model: model)
                     }
                     .padding(.trailing, 24)
                     .padding(.bottom, 28)
@@ -92,23 +146,161 @@ struct PlayerScreen: View {
 
     private func showControls(andScheduleHide shouldHide: Bool) {
         hideControlsTask?.cancel()
-        controlsVisible = true
+        model.setControlsVisible(true)
         if shouldHide {
-            scheduleControlsHideIfPlaying()
+            scheduleControlsHide()
         }
     }
 
-    private func scheduleControlsHideIfPlaying() {
-        guard model.isPlaying else { return }
+    private func scheduleControlsHide() {
+        guard !isOverlayPopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
         hideControlsTask?.cancel()
         hideControlsTask = Task {
-            try? await Task.sleep(for: .seconds(2.2))
+            try? await Task.sleep(for: .seconds(2.5))
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                controlsVisible = false
+                model.setControlsVisible(false)
             }
         }
     }
+
+    private func hideControlsAfterInteraction() {
+        if isPointerInside {
+            scheduleControlsHide()
+        } else {
+            hideControlsNow()
+        }
+    }
+
+    private func hideControlsNow() {
+        guard !isOverlayPopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
+        hideControlsTask?.cancel()
+        model.setControlsVisible(false)
+    }
+}
+
+private struct PointerTrackingView: NSViewRepresentable {
+    let onActivity: () -> Void
+    let onExit: () -> Void
+    let onFrameStep: (Int) -> Void
+
+    func makeNSView(context: Context) -> PointerTrackingNSView {
+        let view = PointerTrackingNSView()
+        view.onActivity = onActivity
+        view.onExit = onExit
+        view.onFrameStep = onFrameStep
+        return view
+    }
+
+    func updateNSView(_ nsView: PointerTrackingNSView, context: Context) {
+        nsView.onActivity = onActivity
+        nsView.onExit = onExit
+        nsView.onFrameStep = onFrameStep
+    }
+}
+
+private final class PointerTrackingNSView: NSView {
+    var onActivity: (() -> Void)?
+    var onExit: (() -> Void)?
+    var onFrameStep: ((Int) -> Void)?
+    private var pointerArea: NSTrackingArea?
+    private var eventMonitor: Any?
+    private var keyboardMonitor: Any?
+    private var windowResignObserver: Any?
+    private var isKHeld = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+            self.eventMonitor = nil
+        }
+        if let keyboardMonitor {
+            NSEvent.removeMonitor(keyboardMonitor)
+            self.keyboardMonitor = nil
+        }
+        if let windowResignObserver {
+            NotificationCenter.default.removeObserver(windowResignObserver)
+            self.windowResignObserver = nil
+        }
+        isKHeld = false
+        guard let window else { return }
+        window.acceptsMouseMovedEvents = true
+        eventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.mouseMoved, .leftMouseDown, .leftMouseDragged, .rightMouseDown, .rightMouseDragged]
+        ) { [weak self, weak window] event in
+            guard let self, let window, event.window === window else { return event }
+            let location = self.convert(event.locationInWindow, from: nil)
+            if self.bounds.contains(location) {
+                self.onActivity?()
+            } else {
+                self.onExit?()
+            }
+            return event
+        }
+        // SwiftUI shortcuts cannot express holding K while tapping J or L.
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self, weak window] event in
+            guard let self, let window, event.window === window else { return event }
+            if event.keyCode == 40, event.type == .keyUp {
+                self.isKHeld = false
+                return event
+            }
+            guard event.type == .keyDown,
+                  event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
+                  !(window.firstResponder is NSTextView) else { return event }
+
+            if event.keyCode == 40 {
+                self.isKHeld = true
+                return event
+            }
+            let frameStep = event.keyCode == 38 ? -1 : (event.keyCode == 37 ? 1 : 0)
+            guard frameStep != 0 else { return event }
+            if event.isARepeat { return nil }
+            if self.isKHeld {
+                self.onFrameStep?(frameStep)
+                return nil
+            }
+            return event
+        }
+        windowResignObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isKHeld = false
+        }
+    }
+
+    deinit {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+        }
+        if let keyboardMonitor {
+            NSEvent.removeMonitor(keyboardMonitor)
+        }
+        if let windowResignObserver {
+            NotificationCenter.default.removeObserver(windowResignObserver)
+        }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let pointerArea {
+            removeTrackingArea(pointerArea)
+        }
+        let area = NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeInActiveApp, .inVisibleRect],
+            owner: self
+        )
+        addTrackingArea(area)
+        pointerArea = area
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func mouseEntered(with event: NSEvent) { onActivity?() }
+    override func mouseMoved(with event: NSEvent) { onActivity?() }
+    override func mouseExited(with event: NSEvent) { onExit?() }
 }
 
 private struct VideoCanvas: View {
@@ -162,31 +354,40 @@ private struct VideoCanvas: View {
 private struct OverlayButton: View {
     @ObservedObject var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
-    @State private var isPopoverPresented = false
+    @Binding var isPopoverPresented: Bool
 
+    @ViewBuilder
     var body: some View {
-        Button {
-            isPopoverPresented.toggle()
-        } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 28, height: 28)
-                    .accessibilityLabel("PNG Overlay")
-
-                if model.hasOverlay {
-                    Circle()
-                        .fill(model.isOverlayEnabled ? Color.green : Color.secondary)
-                        .frame(width: 7, height: 7)
-                        .overlay(Circle().stroke(.white.opacity(0.75), lineWidth: 1))
-                        .offset(x: 1, y: -1)
-                }
-            }
+        if model.hasOverlay && model.isOverlayEnabled {
+            button.buttonStyle(.glassProminent)
+        } else {
+            button.buttonStyle(.glass)
         }
-        .buttonStyle(.glass)
+    }
+
+    private var button: some View {
+        Button {
+            if NSApp.currentEvent?.modifierFlags.contains(.command) == true {
+                if model.hasOverlay {
+                    isPopoverPresented = false
+                    model.setOverlayEnabled(!model.isOverlayEnabled)
+                } else {
+                    model.presentOverlayPanel()
+                }
+            } else {
+                isPopoverPresented.toggle()
+            }
+        } label: {
+            Image(systemName: "plus.viewfinder")
+                .font(.system(size: 17, weight: .semibold))
+                .offset(x: 0.5, y: -0.5)
+                .frame(width: 28, height: 28, alignment: .center)
+                .accessibilityLabel("PNG Overlay")
+        }
         .buttonBorderShape(.circle)
         .controlSize(.large)
-        .help(model.hasOverlay ? "PNG Overlay: \(model.overlayName ?? "")" : "Add PNG Overlay")
+        .help(model.hasOverlay ? "PNG Overlay: \(model.overlayName ?? "") · Command-click to turn \(model.isOverlayEnabled ? "off" : "on")" : "Add PNG Overlay")
+        .accessibilityValue(model.hasOverlay ? (model.isOverlayEnabled ? "On" : "Off") : "No overlay")
         .popover(isPresented: $isPopoverPresented, arrowEdge: .bottom) {
             OverlayPopover(model: model, isPresented: $isPopoverPresented)
         }
@@ -313,7 +514,7 @@ private struct PlaybackHUD: View {
                 HUDButton(title: "Previous Frame", systemImage: "backward.frame.fill") {
                     model.stepFrame(by: -1)
                 }
-                .keyboardShortcut(.leftArrow, modifiers: [])
+                .keyboardShortcut(",", modifiers: [])
 
                 Button {
                     model.togglePlayback()
@@ -330,7 +531,17 @@ private struct PlaybackHUD: View {
                 HUDButton(title: "Next Frame", systemImage: "forward.frame.fill") {
                     model.stepFrame(by: 1)
                 }
-                .keyboardShortcut(.rightArrow, modifiers: [])
+                .keyboardShortcut(".", modifiers: [])
+            }
+            .overlay(alignment: .leading) {
+                if model.shuttleRate < 0 {
+                    speedLabel.offset(x: -25)
+                }
+            }
+            .overlay(alignment: .trailing) {
+                if model.shuttleRate > 1 {
+                    speedLabel.offset(x: 25)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -353,6 +564,9 @@ private struct PlaybackHUD: View {
                     }
                 )
                 .controlSize(.small)
+                .accessibilityLabel("Playback position")
+                .accessibilityValue(playbackAccessibilityValue)
+                .help("Scrub to choose a frame")
 
                 Text("−\(timecode(max(0, model.duration - model.currentTime)))")
                     .monospacedDigit()
@@ -384,31 +598,81 @@ private struct PlaybackHUD: View {
         }
         return String(format: "%02d:%02d", minutes, secs)
     }
+
+    private var playbackAccessibilityValue: String {
+        let position = timecode(model.currentTime)
+        guard model.shuttleRate != 0, model.shuttleRate != 1 else { return position }
+        let direction = model.shuttleRate < 0 ? "reverse" : "forward"
+        return "\(position), \(direction) \(Int(abs(model.shuttleRate))) times speed"
+    }
+
+    private var speedLabel: some View {
+        Text("\(Int(abs(model.shuttleRate)))×")
+            .font(.system(size: 13, weight: .medium))
+            .monospacedDigit()
+            .foregroundStyle(.white.opacity(0.9))
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+    }
 }
 
-private struct CaptureButton: View {
+private struct FrameActionButtons: View {
     @ObservedObject var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
 
     var body: some View {
-        Button {
-            model.captureCurrentFrame()
-        } label: {
-            Image(systemName: model.isCapturing ? "hourglass" : "camera.shutter.button.fill")
-                .font(.system(size: 17, weight: .semibold))
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: 28, height: 28)
-                .accessibilityLabel(model.isCapturing ? "Saving Frame" : "Save Frame")
+        HStack(spacing: 8) {
+            FrameActionButton(model: model, operation: .copy)
+            FrameActionButton(model: model, operation: .save)
         }
-        .buttonStyle(.glassProminent)
-        .buttonBorderShape(.circle)
-        .controlSize(.large)
-        .keyboardShortcut("s", modifiers: .command)
-        .disabled(model.isCapturing)
-        .help("Save Frame (Command-S)")
         .opacity(controlsVisible ? 1 : 0)
         .scaleEffect(controlsVisible ? 1 : 0.92)
         .allowsHitTesting(controlsVisible)
+    }
+}
+
+private struct FrameActionButton: View {
+    @ObservedObject var model: VideoPlayerModel
+    let operation: FrameOperation
+
+    private var isWorking: Bool {
+        operation == .copy ? model.isCopyingFrame : model.isSavingFrame
+    }
+
+    private var title: String {
+        operation == .copy ? "Copy Frame" : "Save Frame"
+    }
+
+    @ViewBuilder
+    var body: some View {
+        if operation == .copy {
+            button
+                .buttonStyle(.glass)
+                .keyboardShortcut("c", modifiers: .command)
+        } else {
+            button.buttonStyle(.glassProminent)
+        }
+    }
+
+    private var button: some View {
+        Button {
+            if operation == .copy {
+                model.copyCurrentFrame()
+            } else {
+                model.captureCurrentFrame()
+            }
+        } label: {
+            Image(systemName: isWorking ? "hourglass" : (operation == .copy ? "doc.on.doc" : "camera.shutter.button.fill"))
+                .font(.system(size: 17, weight: .semibold))
+                .contentTransition(.symbolEffect(.replace))
+                .offset(x: operation == .copy ? 2 : 0, y: operation == .copy ? -1 : 0)
+                .frame(width: 28, height: 28)
+                .accessibilityLabel(isWorking ? "\(operation == .copy ? "Copying" : "Saving") Frame" : title)
+        }
+        .buttonBorderShape(.circle)
+        .controlSize(.large)
+        .disabled(model.isCapturing)
+        .help("\(title) (Command-\(operation == .copy ? "C" : "S"))")
     }
 }
 
@@ -424,6 +688,6 @@ private struct HUDButton: View {
                 .frame(width: 25, height: 25)
         }
         .buttonStyle(.plain)
-        .help(title + (title == "Previous Frame" ? " (Left Arrow)" : " (Right Arrow)"))
+        .help(title + (title == "Previous Frame" ? " (←, comma, or K+J)" : " (→, period, or K+L)"))
     }
 }

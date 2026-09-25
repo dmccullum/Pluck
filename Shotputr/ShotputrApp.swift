@@ -13,6 +13,7 @@ struct ShotgrabberApp: App {
             )
         }
         .defaultSize(width: 480, height: 480)
+        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
             VideoDocumentCommands(windowState: windowState)
@@ -47,6 +48,7 @@ private struct VideoDocumentWindow: View {
                 WindowAspectConfigurator(
                     aspectRatio: model.videoAspectRatio,
                     hasVideo: model.hasVideo,
+                    controlsVisible: model.controlsVisible,
                     presentationID: model.presentationID,
                     onPresentationReady: { id in
                         model.finishPresentation(id: id)
@@ -91,9 +93,17 @@ private struct VideoDocumentWindow: View {
         VideoDocumentActions(
             openVideo: model.presentOpenPanel,
             captureFrame: model.captureCurrentFrame,
+            copyFrame: model.copyCurrentFrame,
             togglePlayback: model.togglePlayback,
+            shuttleBackward: model.shuttleBackward,
+            pausePlayback: model.stopPlayback,
+            shuttleForward: model.shuttleForward,
             previousFrame: { model.stepFrame(by: -1) },
             nextFrame: { model.stepFrame(by: 1) },
+            jumpBackward: { model.seekBy(-5) },
+            jumpForward: { model.seekBy(5) },
+            goToStart: model.seekToStart,
+            goToEnd: model.seekToEnd,
             hasVideo: model.hasVideo,
             isPlaying: model.isPlaying,
             isCapturing: model.isCapturing
@@ -121,9 +131,17 @@ private final class AppWindowState: ObservableObject {
 private struct VideoDocumentActions {
     let openVideo: () -> Void
     let captureFrame: () -> Void
+    let copyFrame: () -> Void
     let togglePlayback: () -> Void
+    let shuttleBackward: () -> Void
+    let pausePlayback: () -> Void
+    let shuttleForward: () -> Void
     let previousFrame: () -> Void
     let nextFrame: () -> Void
+    let jumpBackward: () -> Void
+    let jumpForward: () -> Void
+    let goToStart: () -> Void
+    let goToEnd: () -> Void
     let hasVideo: Bool
     let isPlaying: Bool
     let isCapturing: Bool
@@ -169,11 +187,39 @@ private struct VideoDocumentCommands: Commands {
             .disabled(actions?.hasVideo != true || actions?.isCapturing == true)
         }
 
+        CommandGroup(after: .pasteboard) {
+            Button("Copy Frame") {
+                actions?.copyFrame()
+            }
+            .keyboardShortcut("c", modifiers: .command)
+            .disabled(actions?.hasVideo != true || actions?.isCapturing == true)
+        }
+
         CommandMenu("Playback") {
             Button(actions?.isPlaying == true ? "Pause" : "Play") {
                 actions?.togglePlayback()
             }
             .keyboardShortcut(.space, modifiers: [])
+            .disabled(actions?.hasVideo != true)
+
+            Divider()
+
+            Button("Shuttle Reverse") {
+                actions?.shuttleBackward()
+            }
+            .keyboardShortcut("j", modifiers: [])
+            .disabled(actions?.hasVideo != true)
+
+            Button("Pause") {
+                actions?.pausePlayback()
+            }
+            .keyboardShortcut("k", modifiers: [])
+            .disabled(actions?.hasVideo != true)
+
+            Button("Shuttle Forward") {
+                actions?.shuttleForward()
+            }
+            .keyboardShortcut("l", modifiers: [])
             .disabled(actions?.hasVideo != true)
 
             Divider()
@@ -188,6 +234,32 @@ private struct VideoDocumentCommands: Commands {
                 actions?.nextFrame()
             }
             .keyboardShortcut(.rightArrow, modifiers: [])
+            .disabled(actions?.hasVideo != true)
+
+            Divider()
+
+            Button("Back 5 Seconds") {
+                actions?.jumpBackward()
+            }
+            .keyboardShortcut(.leftArrow, modifiers: .shift)
+            .disabled(actions?.hasVideo != true)
+
+            Button("Forward 5 Seconds") {
+                actions?.jumpForward()
+            }
+            .keyboardShortcut(.rightArrow, modifiers: .shift)
+            .disabled(actions?.hasVideo != true)
+
+            Button("Go to Start") {
+                actions?.goToStart()
+            }
+            .keyboardShortcut(.home, modifiers: [])
+            .disabled(actions?.hasVideo != true)
+
+            Button("Go to End") {
+                actions?.goToEnd()
+            }
+            .keyboardShortcut(.end, modifiers: [])
             .disabled(actions?.hasVideo != true)
         }
 

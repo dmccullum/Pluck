@@ -1,86 +1,74 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "display-p3:0.05098,0.07059,0.18039,1.00000",
-      "display-p3:0.08627,0.22353,0.38824,1.00000"
-    ],
-    "orientation" : {
-      "start" : {
-        "x" : 0.18,
-        "y" : 0
-      },
-      "stop" : {
-        "x" : 0.82,
-        "y" : 0.9
-      }
-    }
-  },
-  "groups" : [
+  "fill-specializations" : [
     {
-      "layers" : [
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:1.00000,0.25882,0.19608,1.00000",
-              "display-p3:1.00000,0.52941,0.19216,1.00000"
-            ]
+      "value" : {
+        "linear-gradient" : [
+          "srgb:0.68848,0.90975,1.00000,1.00000",
+          "srgb:0.08974,0.30968,0.66992,1.00000"
+        ],
+        "orientation" : {
+          "start" : {
+            "x" : 0.5,
+            "y" : 0
           },
-          "glass" : true,
-          "image-name" : "playhead.svg",
-          "name" : "Playhead",
-          "position-specializations" : [
-            {
-              "idiom" : "square",
-              "value" : {
-                "scale" : 0.92,
-                "translation-in-points" : [
-                  0,
-                  22
-                ]
-              }
-            }
-          ]
+          "stop" : {
+            "x" : 0.5,
+            "y" : 0.7
+          }
         }
-      ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.34
-      },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.12
       }
     },
     {
+      "appearance" : "dark",
+      "value" : {
+        "linear-gradient" : [
+          "srgb:0.01334,0.03217,0.06477,1.00000",
+          "srgb:0.08974,0.30968,0.66992,1.00000"
+        ],
+        "orientation" : {
+          "start" : {
+            "x" : 0.5,
+            "y" : 0
+          },
+          "stop" : {
+            "x" : 0.5,
+            "y" : 0.7
+          }
+        }
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "blur-material" : 0.31,
       "layers" : [
         {
           "fill" : {
             "linear-gradient" : [
-              "display-p3:0.29804,0.68235,1.00000,1.00000",
-              "display-p3:0.28627,0.29412,0.92549,1.00000"
+              "display-p3:0.92960,0.82005,0.40842,1.00000",
+              "srgb:0.89781,0.73523,0.02667,1.00000"
             ],
             "orientation" : {
               "start" : {
-                "x" : 0.25,
-                "y" : 0
+                "x" : 0.5000000000000002,
+                "y" : 0.08442579730172027
               },
               "stop" : {
-                "x" : 0.75,
-                "y" : 1
+                "x" : 0.5,
+                "y" : 0.7
               }
             }
           },
-          "glass" : true,
-          "image-name" : "frame-card.svg",
-          "name" : "Extracted Frame",
+          "image-name" : "shotgrabber base-06.svg",
+          "name" : "shotgrabber base-06",
           "position-specializations" : [
             {
               "idiom" : "square",
               "value" : {
-                "scale" : 0.9,
+                "scale" : 1.07,
                 "translation-in-points" : [
-                  0,
-                  -14
+                  -10.75,
+                  0
                 ]
               }
             }
@@ -88,67 +76,166 @@
         },
         {
           "fill" : {
-            "automatic-gradient" : "extended-gray:1.00000,1.00000"
+            "automatic-gradient" : "srgb:1.00000,0.81361,0.02370,1.00000",
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 0.7
+              }
+            }
           },
           "glass" : true,
-          "image-name" : "image-glyph.svg",
-          "name" : "Image Detail",
+          "image-name" : "shotgrabber base-05.svg",
+          "name" : "shotgrabber base-05",
           "position-specializations" : [
             {
               "idiom" : "square",
               "value" : {
-                "scale" : 0.9,
+                "scale" : 1.07,
                 "translation-in-points" : [
-                  0,
-                  -14
+                  -10.75,
+                  0
                 ]
               }
             }
           ]
         }
       ],
+      "lighting" : "combined",
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5
       },
+      "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.22
+        "value" : 0.69
+      }
+    },
+    {
+      "blur-material" : 0.25,
+      "layers" : [
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:0.21340,0.04456,0.00000,1.00000",
+              "srgb:1.00000,0.29267,0.00000,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.41939862375247067,
+                "y" : 1
+              }
+            }
+          },
+          "image-name" : "shotgrabber base-04.svg",
+          "name" : "shotgrabber base-04",
+          "position-specializations" : [
+            {
+              "idiom" : "square",
+              "value" : {
+                "scale" : 1.07,
+                "translation-in-points" : [
+                  0,
+                  0
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "lighting" : "combined",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.75
       }
     },
     {
       "layers" : [
         {
           "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.25882,0.35686,0.60784,1.00000",
-              "display-p3:0.15294,0.23529,0.45490,1.00000"
-            ]
+            "automatic-gradient" : "srgb:0.89781,0.73523,0.02667,1.00000",
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 0.7
+              }
+            }
           },
-          "glass" : true,
-          "image-name" : "timeline.svg",
-          "name" : "Video Timeline",
+          "image-name" : "shotgrabber base-03.svg",
+          "name" : "shotgrabber base-03",
           "position-specializations" : [
             {
               "idiom" : "square",
               "value" : {
-                "scale" : 0.92,
+                "scale" : 1.07,
                 "translation-in-points" : [
-                  0,
-                  22
+                  -10.75,
+                  0
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.92960,0.82005,0.40842,1.00000",
+              "srgb:0.89781,0.73523,0.02667,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5000000000000002,
+                "y" : 1
+              }
+            }
+          },
+          "hidden" : true,
+          "image-name" : "shotgrabber base-02.svg",
+          "name" : "shotgrabber base-02",
+          "position-specializations" : [
+            {
+              "idiom" : "square",
+              "value" : {
+                "scale" : 1.07,
+                "translation-in-points" : [
+                  -10.75,
+                  0
                 ]
               }
             }
           ]
         }
       ],
+      "lighting" : "combined",
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.34
+        "opacity" : 0.5
       },
       "translucency" : {
         "enabled" : true,
-        "value" : 0.32
+        "value" : 0.5
       }
     }
   ],
