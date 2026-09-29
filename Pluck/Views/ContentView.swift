@@ -175,15 +175,42 @@ private struct ToastView: View {
                 }
                 .buttonStyle(.glass)
                 .controlSize(.small)
+                .fixedSize()
             }
         }
         .padding(.leading, toast.thumbnail == nil ? 15 : 10)
         .padding(.trailing, toast.revealURL == nil ? 16 : 7)
         .padding(.vertical, 7)
         .frame(minHeight: 44)
-        .fixedSize()
+        .fixedSize(horizontal: false, vertical: true)
         .glassEffect(.regular, in: .capsule)
         .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+        .modifier(HugContentWidth())
         .padding(.horizontal, 20)
+    }
+}
+
+/// Sizes a view to its natural width, but never wider than its container offers,
+/// so a long message truncates instead of stretching the window's layout.
+private struct HugContentWidth: ViewModifier {
+    func body(content: Content) -> some View {
+        HugContentWidthLayout { content }
+    }
+}
+
+private struct HugContentWidthLayout: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let subview = subviews.first else { return .zero }
+        let ideal = subview.sizeThatFits(.unspecified)
+        let width = min(ideal.width, proposal.width ?? ideal.width)
+        return subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(
+            at: CGPoint(x: bounds.midX, y: bounds.midY),
+            anchor: .center,
+            proposal: ProposedViewSize(width: bounds.width, height: bounds.height)
+        )
     }
 }

@@ -12,7 +12,23 @@ struct Scrubber: View {
     @State private var previewTask: Task<Void, Never>?
     @State private var isDragging = false
 
-    private let previewWidth: CGFloat = 168
+    /// The preview image fits inside this box, so portrait video gets a narrower
+    /// preview rather than a taller one.
+    private let previewBounds = CGSize(width: 158, height: 112)
+    private let previewPadding: CGFloat = 5
+
+    private var previewImageSize: CGSize {
+        let aspectRatio = CGFloat(min(max(model.videoAspectRatio, 0.3), 4))
+        let fitsWidth = previewBounds.width / aspectRatio <= previewBounds.height
+        return fitsWidth
+            ? CGSize(width: previewBounds.width, height: previewBounds.width / aspectRatio)
+            : CGSize(width: previewBounds.height * aspectRatio, height: previewBounds.height)
+    }
+
+    /// Wide enough for the image, and never narrower than the time label beneath it.
+    private var previewWidth: CGFloat {
+        max(previewImageSize.width + previewPadding * 2, 96)
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -103,7 +119,7 @@ struct Scrubber: View {
                         .aspectRatio(contentMode: .fit)
                 }
             }
-            .frame(width: previewWidth - 10, height: (previewWidth - 10) / CGFloat(max(0.3, min(model.videoAspectRatio, 4))))
+            .frame(width: previewImageSize.width, height: previewImageSize.height)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text(label(seconds))
@@ -111,7 +127,7 @@ struct Scrubber: View {
                 .monospacedDigit()
                 .foregroundStyle(.white)
         }
-        .padding(5)
+        .padding(previewPadding)
         .padding(.bottom, 1)
         .frame(width: previewWidth)
         .glassEffect(.regular.tint(.black.opacity(0.35)), in: .rect(cornerRadius: 13))

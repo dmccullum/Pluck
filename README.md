@@ -11,14 +11,16 @@ Pluck is a small, native macOS app for opening a video, finding the exact frame 
 - Saves the current frame with **Command-S**, or copies it to the clipboard with **Command-C**.
 - Shows the position as timecode, frame number, or minutes and seconds; click the time to switch.
 - Previews frames when you hover over the timeline.
-- Command-clicks the overlay button to turn a loaded PNG overlay on or off without opening its menu.
+- Shows safe zone guides (Instagram Reels, or Meta's stricter ads layout) from the safe zone button; Command-click it to turn the guide on or off. Optionally include it in saved and copied frames.
 - Exports PNG, JPEG, HEIC, or TIFF.
 - Either asks where to save every capture or remembers a destination folder.
 - Resizes the document window to the source aspect ratio. The title bar and Liquid Glass controls fade away after inactivity and return when you move the pointer.
 
 ## Build
 
-Open `Pluck.xcodeproj` in Xcode and run the `Pluck` scheme, or build from Terminal:
+Double-click `build.command` to build a Release copy into `Build/Pluck.app` and open it.
+
+Or open `Pluck.xcodeproj` in Xcode and run the `Pluck` scheme, or build from Terminal:
 
 ```sh
 xcodebuild -project Pluck.xcodeproj -scheme Pluck -configuration Debug build

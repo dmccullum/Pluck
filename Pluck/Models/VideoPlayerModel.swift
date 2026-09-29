@@ -1,7 +1,6 @@
 import AppKit
 import AVFoundation
 import Combine
-import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
 
@@ -25,10 +24,8 @@ final class VideoPlayerModel: ObservableObject {
     @Published private(set) var completedOperation: FrameOperation?
     @Published private(set) var videoDimensions: CGSize = .zero
     @Published private(set) var frameRate: Double = 30
-    @Published private(set) var overlayImage: NSImage?
-    @Published private(set) var overlayURL: URL?
-    @Published private(set) var isOverlayEnabled: Bool
-    @Published private(set) var overlaySizing: OverlaySizing
+    @Published private(set) var safeZone: SafeZone
+    @Published private(set) var includesSafeZoneInCaptures: Bool
 
     private var asset: AVAsset?
     private var frameDuration = 1.0 / 30.0
@@ -46,15 +43,11 @@ final class VideoPlayerModel: ObservableObject {
     private var previewCache: [Int: CGImage] = [:]
     private var previewWarmupTask: Task<Void, Never>?
     private static let previewBucketCount = 150
-    private var overlaySecurityScopedURL: URL?
-    private let overlayContext = CIContext(options: [.cacheIntermediates: false])
 
     var documentOpener: ((URL) -> Void)?
 
     var hasVideo: Bool { player != nil && videoURL != nil }
     var isPlaying: Bool { shuttleRate != 0 }
-    var hasOverlay: Bool { overlayImage != nil && overlayURL != nil }
-    var overlayName: String? { overlayURL?.lastPathComponent }
     var isCapturing: Bool { frameOperation != nil }
     var isSavingFrame: Bool { frameOperation == .save }
     var isCopyingFrame: Bool { frameOperation == .copy }
@@ -74,13 +67,8 @@ final class VideoPlayerModel: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
-        isOverlayEnabled = defaults.object(forKey: PreferenceKey.overlayEnabled) == nil
-            ? true
-            : defaults.bool(forKey: PreferenceKey.overlayEnabled)
-        overlaySizing = OverlaySizing(
-            rawValue: defaults.string(forKey: PreferenceKey.overlaySizing) ?? ""
-        ) ?? .fit
-        restoreOverlay()
+        safeZone = SafeZone(rawValue: defaults.string(forKey: PreferenceKey.safeZone) ?? "") ?? .off
+        includesSafeZoneInCaptures = defaults.bool(forKey: PreferenceKey.safeZoneInCaptures)
     }
 
     func presentOpenPanel() {
@@ -107,10 +95,6 @@ final class VideoPlayerModel: ObservableObject {
     @discardableResult
     func handleDrop(url: URL) -> Bool {
         let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
-        if hasVideo, contentType?.conforms(to: .png) == true {
-            installOverlay(from: url)
-            return true
-        }
         guard contentType?.conforms(to: .movie) == true
                 || contentType?.conforms(to: .audiovisualContent) == true else {
             return false
@@ -119,39 +103,29 @@ final class VideoPlayerModel: ObservableObject {
         return true
     }
 
-    func presentOverlayPanel() {
-        let panel = NSOpenPanel()
-        panel.title = hasOverlay ? "Replace PNG Overlay" : "Choose a PNG Overlay"
-        panel.prompt = hasOverlay ? "Replace" : "Choose"
-        panel.allowedContentTypes = [.png]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
+    func setIncludesSafeZoneInCaptures(_ included: Bool) {
+        includesSafeZoneInCaptures = included
+        UserDefaults.standard.set(included, forKey: PreferenceKey.safeZoneInCaptures)
+    }
 
-        if panel.runModal() == .OK, let url = panel.url {
-            installOverlay(from: url)
+    /// Turns the guide off, or back on to the zone used most recently (Reels at first).
+    func toggleSafeZone() {
+        if safeZone != .off {
+            setSafeZone(.off)
+        } else {
+            let last = SafeZone(rawValue: UserDefaults.standard.string(forKey: PreferenceKey.lastSafeZone) ?? "")
+            setSafeZone(last.flatMap { $0 == .off ? nil : $0 } ?? .reels)
         }
     }
 
-    func setOverlayEnabled(_ enabled: Bool) {
-        guard hasOverlay, enabled != isOverlayEnabled else { return }
-        isOverlayEnabled = enabled
-        UserDefaults.standard.set(enabled, forKey: PreferenceKey.overlayEnabled)
-        showToast(enabled ? "Overlay on" : "Overlay off", systemImage: enabled ? "eye.fill" : "eye.slash.fill")
-    }
-
-    func setOverlaySizing(_ sizing: OverlaySizing) {
-        guard sizing != overlaySizing else { return }
-        overlaySizing = sizing
-        UserDefaults.standard.set(sizing.rawValue, forKey: PreferenceKey.overlaySizing)
-    }
-
-    func removeOverlay() {
-        overlaySecurityScopedURL?.stopAccessingSecurityScopedResource()
-        overlaySecurityScopedURL = nil
-        overlayImage = nil
-        overlayURL = nil
-        OverlayBookmarkStore.clear()
-        showToast("Overlay removed", systemImage: "trash.fill")
+    func setSafeZone(_ zone: SafeZone) {
+        guard zone != safeZone else { return }
+        safeZone = zone
+        UserDefaults.standard.set(zone.rawValue, forKey: PreferenceKey.safeZone)
+        if zone != .off {
+            UserDefaults.standard.set(zone.rawValue, forKey: PreferenceKey.lastSafeZone)
+        }
+        showToast(zone == .off ? "Safe zone off" : "\(zone.title) safe zone", systemImage: zone == .off ? "eye.slash.fill" : "rectangle.dashed")
     }
 
     func open(url: URL) {
@@ -542,7 +516,7 @@ final class VideoPlayerModel: ObservableObject {
                 generator.requestedTimeToleranceAfter = .zero
 
                 let (image, _) = try await generator.image(at: captureTime)
-                let capturedImage = try self.applyingOverlay(to: image)
+                let capturedImage = self.includesSafeZoneInCaptures ? Self.drawing(self.safeZone, onto: image) : image
                 let thumbnail = Self.thumbnail(of: capturedImage)
                 switch operation {
                 case .save:
@@ -629,6 +603,48 @@ final class VideoPlayerModel: ObservableObject {
         }
     }
 
+    /// Burns the safe zone guide into a captured frame, matching what's shown on screen.
+    private static func drawing(_ zone: SafeZone, onto image: CGImage) -> CGImage {
+        guard zone != .off else { return image }
+        let width = CGFloat(image.width), height = CGFloat(image.height)
+        guard let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return image }
+
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        // Core Graphics puts the origin bottom-left; the zone is defined top-left.
+        context.translateBy(x: 0, y: height)
+        context.scaleBy(x: 1, y: -1)
+
+        let safeArea = CGMutablePath()
+        safeArea.addLines(between: zone.polygon.map { CGPoint(x: $0.x * width, y: $0.y * height) })
+        safeArea.closeSubpath()
+
+        let dimmed = CGMutablePath()
+        dimmed.addRect(CGRect(x: 0, y: 0, width: width, height: height))
+        dimmed.addPath(safeArea)
+        context.addPath(dimmed)
+        context.setFillColor(CGColor(gray: 0, alpha: 0.42))
+        context.fillPath(using: .evenOdd)
+
+        // Scale the outline so it reads the same as on screen at any resolution.
+        let lineWidth = max(1.5, width * 0.004)
+        context.addPath(safeArea)
+        context.setStrokeColor(CGColor(gray: 1, alpha: 0.9))
+        context.setLineWidth(lineWidth)
+        context.setLineJoin(.round)
+        context.setLineDash(phase: 0, lengths: [lineWidth * 4, lineWidth * 2.7])
+        context.strokePath()
+
+        return context.makeImage() ?? image
+    }
+
     private static func thumbnail(of image: CGImage, maxDimension: CGFloat = 480) -> NSImage {
         let scale = min(1, maxDimension / CGFloat(max(image.width, image.height)))
         let size = CGSize(width: max(1, CGFloat(image.width) * scale), height: max(1, CGFloat(image.height) * scale))
@@ -678,111 +694,6 @@ final class VideoPlayerModel: ObservableObject {
             throw PlayerError.couldNotEncode
         }
         return data
-    }
-
-    private func restoreOverlay() {
-        guard let url = OverlayBookmarkStore.resolve() else { return }
-        do {
-            try loadOverlay(from: url, persistBookmark: false)
-        } catch {
-            OverlayBookmarkStore.clear()
-        }
-    }
-
-    private func installOverlay(from url: URL) {
-        do {
-            try loadOverlay(from: url, persistBookmark: true)
-            isOverlayEnabled = true
-            UserDefaults.standard.set(true, forKey: PreferenceKey.overlayEnabled)
-            showToast("Using \(url.lastPathComponent)", systemImage: "square.2.layers.3d.top.filled")
-        } catch {
-            alertMessage = "That PNG couldn’t be used as an overlay. \(error.localizedDescription)"
-        }
-    }
-
-    private func loadOverlay(from url: URL, persistBookmark: Bool) throws {
-        let contentType = try url.resourceValues(forKeys: [.contentTypeKey]).contentType
-        guard contentType?.conforms(to: .png) == true else {
-            throw PlayerError.overlayMustBePNG
-        }
-
-        let gainedSecurityScope = url.startAccessingSecurityScopedResource()
-        guard let image = NSImage(contentsOf: url),
-              image.cgImage(forProposedRect: nil, context: nil, hints: nil) != nil else {
-            if gainedSecurityScope {
-                url.stopAccessingSecurityScopedResource()
-            }
-            throw PlayerError.invalidOverlay
-        }
-
-        do {
-            if persistBookmark {
-                try OverlayBookmarkStore.save(url)
-            }
-        } catch {
-            if gainedSecurityScope {
-                url.stopAccessingSecurityScopedResource()
-            }
-            throw error
-        }
-
-        overlaySecurityScopedURL?.stopAccessingSecurityScopedResource()
-        overlaySecurityScopedURL = gainedSecurityScope ? url : nil
-        overlayImage = image
-        overlayURL = url
-    }
-
-    private func applyingOverlay(to image: CGImage) throws -> CGImage {
-        guard isOverlayEnabled, let overlayImage else { return image }
-        guard let overlayCGImage = overlayImage.cgImage(
-            forProposedRect: nil,
-            context: nil,
-            hints: nil
-        ) else {
-            throw PlayerError.invalidOverlay
-        }
-
-        let outputExtent = CGRect(
-            x: 0,
-            y: 0,
-            width: image.width,
-            height: image.height
-        )
-        let overlayExtent = CGRect(
-            x: 0,
-            y: 0,
-            width: overlayCGImage.width,
-            height: overlayCGImage.height
-        )
-        guard !outputExtent.isEmpty, !overlayExtent.isEmpty else {
-            throw PlayerError.invalidOverlay
-        }
-
-        let horizontalScale = outputExtent.width / overlayExtent.width
-        let verticalScale = outputExtent.height / overlayExtent.height
-        let scale = overlaySizing == .fit
-            ? min(horizontalScale, verticalScale)
-            : max(horizontalScale, verticalScale)
-        let scaledSize = CGSize(
-            width: overlayExtent.width * scale,
-            height: overlayExtent.height * scale
-        )
-        let overlayTransform = CGAffineTransform(scaleX: scale, y: scale)
-            .translatedBy(
-                x: (outputExtent.width - scaledSize.width) / (2 * scale),
-                y: (outputExtent.height - scaledSize.height) / (2 * scale)
-            )
-
-        let base = CIImage(cgImage: image)
-        let overlay = CIImage(cgImage: overlayCGImage)
-            .transformed(by: overlayTransform)
-            .cropped(to: outputExtent)
-        let result = overlay.composited(over: base).cropped(to: outputExtent)
-
-        guard let compositedImage = overlayContext.createCGImage(result, from: outputExtent) else {
-            throw PlayerError.couldNotCompositeOverlay
-        }
-        return compositedImage
     }
 
     private func uniqueURL(in folder: URL, filename: String) -> URL {
@@ -851,9 +762,6 @@ private enum PlayerError: LocalizedError {
     case noVideoTrack
     case couldNotEncode
     case couldNotCopy
-    case overlayMustBePNG
-    case invalidOverlay
-    case couldNotCompositeOverlay
 
     var errorDescription: String? {
         switch self {
@@ -861,9 +769,6 @@ private enum PlayerError: LocalizedError {
         case .noVideoTrack: "The file has no video track."
         case .couldNotEncode: "The image could not be encoded in the selected format."
         case .couldNotCopy: "The clipboard did not accept the image."
-        case .overlayMustBePNG: "Choose a PNG file."
-        case .invalidOverlay: "The overlay image is invalid."
-        case .couldNotCompositeOverlay: "The overlay could not be composited onto the frame."
         }
     }
 }

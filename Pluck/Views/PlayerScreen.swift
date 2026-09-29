@@ -7,7 +7,7 @@ struct PlayerScreen: View {
     let player: AVPlayer
 
     @State private var hideControlsTask: Task<Void, Never>?
-    @State private var isOverlayPopoverPresented = false
+    @State private var isSafeZonePopoverPresented = false
     @State private var isPointerInside = false
 
     var body: some View {
@@ -63,7 +63,7 @@ struct PlayerScreen: View {
                 hideControlsAfterInteraction()
             }
         }
-        .onChange(of: isOverlayPopoverPresented) { _, isPresented in
+        .onChange(of: isSafeZonePopoverPresented) { _, isPresented in
             if isPresented {
                 showControls(andScheduleHide: false)
             } else {
@@ -137,7 +137,7 @@ struct PlayerScreen: View {
                 Spacer()
 
                 HStack {
-                    OverlayButton(model: model, isPopoverPresented: $isOverlayPopoverPresented)
+                    SafeZoneButton(model: model, isPopoverPresented: $isSafeZonePopoverPresented)
                     Spacer()
                     FrameActionButtons(model: model)
                 }
@@ -161,7 +161,7 @@ struct PlayerScreen: View {
                 VStack {
                     Spacer()
                     HStack {
-                        OverlayButton(model: model, isPopoverPresented: $isOverlayPopoverPresented)
+                        SafeZoneButton(model: model, isPopoverPresented: $isSafeZonePopoverPresented)
                         Spacer()
                     }
                     .padding(.leading, 24)
@@ -190,7 +190,7 @@ struct PlayerScreen: View {
     }
 
     private func scheduleControlsHide() {
-        guard !isOverlayPopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
+        guard !isSafeZonePopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
         hideControlsTask?.cancel()
         hideControlsTask = Task {
             try? await Task.sleep(for: .seconds(2.5))
@@ -210,7 +210,7 @@ struct PlayerScreen: View {
     }
 
     private func hideControlsNow() {
-        guard !isOverlayPopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
+        guard !isSafeZonePopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
         hideControlsTask?.cancel()
         model.setControlsVisible(false)
     }
@@ -351,15 +351,12 @@ private struct VideoCanvas: View {
             ZStack {
                 VideoSurface(player: player)
 
-                if model.isOverlayEnabled, let overlayImage = model.overlayImage {
-                    Image(nsImage: overlayImage)
-                        .resizable()
-                        .aspectRatio(contentMode: model.overlaySizing == .fit ? .fit : .fill)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                if model.safeZone != .off {
+                    SafeZoneGuide(zone: model.safeZone)
                         .transition(.opacity)
                 }
             }
+            .animation(.easeOut(duration: 0.2), value: model.safeZone)
             .frame(width: canvasSize.width, height: canvasSize.height)
             .clipped()
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
@@ -389,145 +386,113 @@ private func fittedCanvasSize(aspectRatio videoAspectRatio: Double, in available
     )
 }
 
-private struct OverlayButton: View {
+private struct SafeZoneButton: View {
     @ObservedObject var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
     @Binding var isPopoverPresented: Bool
 
-    @ViewBuilder
     var body: some View {
-        if model.hasOverlay && model.isOverlayEnabled {
-            button.buttonStyle(.glassProminent)
-        } else {
-            button.buttonStyle(.glass)
-        }
-    }
-
-    private var button: some View {
-        Button {
-            if NSApp.currentEvent?.modifierFlags.contains(.command) == true {
-                if model.hasOverlay {
-                    isPopoverPresented = false
-                    model.setOverlayEnabled(!model.isOverlayEnabled)
-                } else {
-                    model.presentOverlayPanel()
-                }
+        // The popover hangs off this stable container rather than the button, because
+        // swapping button styles replaces the button and would dismiss the popover.
+        Group {
+            if model.safeZone != .off {
+                button.buttonStyle(.glassProminent)
             } else {
-                isPopoverPresented.toggle()
+                button.buttonStyle(.glass)
             }
-        } label: {
-            Image(systemName: "plus.viewfinder")
-                .font(.system(size: 17, weight: .semibold))
-                .offset(x: 0.5, y: -0.5)
-                .frame(width: 28, height: 28, alignment: .center)
-                .accessibilityLabel("PNG Overlay")
         }
-        .buttonBorderShape(.circle)
-        .controlSize(.large)
-        .help(model.hasOverlay ? "PNG Overlay: \(model.overlayName ?? "") · Command-click to turn \(model.isOverlayEnabled ? "off" : "on")" : "Add PNG Overlay")
-        .accessibilityValue(model.hasOverlay ? (model.isOverlayEnabled ? "On" : "Off") : "No overlay")
         .popover(isPresented: $isPopoverPresented, arrowEdge: .bottom) {
-            OverlayPopover(model: model, isPresented: $isPopoverPresented)
+            SafeZonePopover(model: model)
         }
         .opacity(controlsVisible ? 1 : 0)
         .scaleEffect(controlsVisible ? 1 : 0.92)
         .allowsHitTesting(controlsVisible)
     }
+
+    private var button: some View {
+        Button {
+            if NSApp.currentEvent?.modifierFlags.contains(.command) == true {
+                isPopoverPresented = false
+                model.toggleSafeZone()
+            } else {
+                isPopoverPresented.toggle()
+            }
+        } label: {
+            Image(systemName: "rectangle.dashed")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: 28, height: 28, alignment: .center)
+                .accessibilityLabel("Safe Zone")
+        }
+        .buttonBorderShape(.circle)
+        .controlSize(.large)
+        .help((model.safeZone == .off ? "Safe zone guides" : "Safe zone: \(model.safeZone.title)") + " · Command-click to turn \(model.safeZone == .off ? "on" : "off")")
+        .accessibilityValue(model.safeZone == .off ? "Off" : model.safeZone.title)
+    }
 }
 
-private struct OverlayPopover: View {
+private struct SafeZonePopover: View {
     @ObservedObject var model: VideoPlayerModel
-    @Binding var isPresented: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 11) {
-                overlayPreview
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Safe Zone")
+                .font(.headline)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("PNG Overlay")
-                        .font(.headline)
-                    Text(model.overlayName ?? "No overlay selected")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-            }
-
-            if model.hasOverlay {
-                Toggle(
-                    "Show Overlay",
-                    isOn: Binding(
-                        get: { model.isOverlayEnabled },
-                        set: { model.setOverlayEnabled($0) }
-                    )
+            Picker(
+                "Safe Zone",
+                selection: Binding(
+                    get: { model.safeZone },
+                    set: { model.setSafeZone($0) }
                 )
-                .toggleStyle(.switch)
-
-                HStack {
-                    Text("Sizing")
-                    Spacer()
-                    Picker(
-                        "Sizing",
-                        selection: Binding(
-                            get: { model.overlaySizing },
-                            set: { model.setOverlaySizing($0) }
-                        )
-                    ) {
-                        ForEach(OverlaySizing.allCases) { sizing in
-                            Text(sizing.title).tag(sizing)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .frame(width: 116)
+            ) {
+                ForEach(SafeZone.allCases) { zone in
+                    Text(zone.title).tag(zone)
                 }
-
-                Divider()
-
-                HStack {
-                    Button("Replace…") {
-                        isPresented = false
-                        model.presentOverlayPanel()
-                    }
-
-                    Spacer()
-
-                    Button("Remove", role: .destructive) {
-                        model.removeOverlay()
-                        isPresented = false
-                    }
-                }
-            } else {
-                Button("Choose PNG…") {
-                    isPresented = false
-                    model.presentOverlayPanel()
-                }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+
+            Toggle(
+                "Include in saved frames",
+                isOn: Binding(
+                    get: { model.includesSafeZoneInCaptures },
+                    set: { model.setIncludesSafeZoneInCaptures($0) }
+                )
+            )
+            .toggleStyle(.switch)
+            .disabled(model.safeZone == .off)
+            .padding(.top, 4)
         }
         .padding(16)
         .frame(width: 280)
     }
+}
 
-    @ViewBuilder
-    private var overlayPreview: some View {
-        if let image = model.overlayImage {
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 48, height: 48)
-                .background(.black.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        } else {
-            Image(systemName: "photo.badge.plus")
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 48, height: 48)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+/// Dims everything outside a platform's safe area and outlines it.
+/// Display only — it is never composited into captures.
+private struct SafeZoneGuide: View {
+    let zone: SafeZone
+
+    var body: some View {
+        Canvas { context, size in
+            let points = zone.polygon.map { CGPoint(x: $0.x * size.width, y: $0.y * size.height) }
+            guard !points.isEmpty else { return }
+            var safeArea = Path()
+            safeArea.addLines(points)
+            safeArea.closeSubpath()
+
+            var dimmed = Path(CGRect(origin: .zero, size: size))
+            dimmed.addPath(safeArea)
+            context.fill(dimmed, with: .color(.black.opacity(0.42)), style: FillStyle(eoFill: true))
+
+            context.stroke(
+                safeArea,
+                with: .color(.white.opacity(0.9)),
+                style: StrokeStyle(lineWidth: 1.5, lineJoin: .round, dash: [6, 4])
+            )
         }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

@@ -59,31 +59,16 @@ enum SaveDestination: String, CaseIterable, Identifiable {
     }
 }
 
-enum OverlaySizing: String, CaseIterable, Identifiable {
-    case fit
-    case fill
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .fit: "Fit"
-        case .fill: "Fill"
-        }
-    }
-}
-
 enum PreferenceKey {
     static let captureFormat = "captureFormat"
     static let saveDestination = "saveDestination"
     static let jpegQuality = "jpegQuality"
     static let folderBookmark = "folderBookmark"
     static let folderDisplayPath = "folderDisplayPath"
-    static let overlayBookmark = "overlayBookmark"
-    static let overlayDisplayPath = "overlayDisplayPath"
-    static let overlayEnabled = "overlayEnabled"
-    static let overlaySizing = "overlaySizing"
     static let timeDisplay = "timeDisplay"
+    static let safeZone = "safeZone"
+    static let safeZoneInCaptures = "safeZoneInCaptures"
+    static let lastSafeZone = "lastSafeZone"
 }
 
 enum TimeDisplay: String, CaseIterable {
@@ -139,47 +124,6 @@ enum FolderBookmarkStore {
     }
 }
 
-enum OverlayBookmarkStore {
-    static func save(_ fileURL: URL) throws {
-        let data = try fileURL.bookmarkData(
-            options: .withSecurityScope,
-            includingResourceValuesForKeys: [.contentTypeKey],
-            relativeTo: nil
-        )
-        let defaults = UserDefaults.standard
-        defaults.set(data, forKey: PreferenceKey.overlayBookmark)
-        defaults.set(fileURL.path, forKey: PreferenceKey.overlayDisplayPath)
-    }
-
-    static func resolve() -> URL? {
-        guard let data = UserDefaults.standard.data(forKey: PreferenceKey.overlayBookmark) else {
-            return nil
-        }
-
-        var isStale = false
-        guard let url = try? URL(
-            resolvingBookmarkData: data,
-            options: .withSecurityScope,
-            relativeTo: nil,
-            bookmarkDataIsStale: &isStale
-        ) else {
-            clear()
-            return nil
-        }
-
-        if isStale {
-            try? save(url)
-        }
-        return url
-    }
-
-    static func clear() {
-        let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: PreferenceKey.overlayBookmark)
-        defaults.removeObject(forKey: PreferenceKey.overlayDisplayPath)
-    }
-}
-
 enum CaptureFileName {
     static func make(videoURL: URL, seconds: Double, extension fileExtension: String) -> String {
         let stem = videoURL.deletingPathExtension().lastPathComponent
@@ -192,5 +136,42 @@ enum CaptureFileName {
         let millis = totalMilliseconds % 1_000
         let timecode = String(format: "%02d-%02d-%02d-%03d", hours, minutes, secs, millis)
         return "\(safeStem) — \(timecode).\(fileExtension)"
+    }
+}
+
+/// Guides for where a platform's interface covers a 9:16 frame. Percentages are of the frame.
+enum SafeZone: String, CaseIterable, Identifiable {
+    case off
+    /// Measured from Instagram's Edits app: 13% top, 20% bottom, 4.5% sides, plus a
+    /// 17%-wide notch from 63% down for the like/comment/share buttons.
+    case reels
+    /// Meta's Facebook/Instagram ads guideline: 14% top, 35% bottom, 6% sides, plus a
+    /// 21%-wide, 40%-tall bottom-right notch for the action buttons.
+    case metaAds
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .off: "Off"
+        case .reels: "Reels"
+        case .metaAds: "Meta Ads"
+        }
+    }
+
+    /// The safe area as a closed polygon in unit coordinates (0–1, origin top-left).
+    var polygon: [CGPoint] {
+        switch self {
+        case .off:
+            []
+        case .reels:
+            [CGPoint(x: 0.045, y: 0.13), CGPoint(x: 0.955, y: 0.13),
+             CGPoint(x: 0.955, y: 0.63), CGPoint(x: 0.83, y: 0.63),
+             CGPoint(x: 0.83, y: 0.80), CGPoint(x: 0.045, y: 0.80)]
+        case .metaAds:
+            [CGPoint(x: 0.06, y: 0.14), CGPoint(x: 0.94, y: 0.14),
+             CGPoint(x: 0.94, y: 0.60), CGPoint(x: 0.79, y: 0.60),
+             CGPoint(x: 0.79, y: 0.65), CGPoint(x: 0.06, y: 0.65)]
+        }
     }
 }
