@@ -1,6 +1,6 @@
-# Shotgrabber
+# Pluck
 
-Shotgrabber is a small, native macOS app for opening a video, finding the exact frame you want, and saving it as an image.
+Pluck is a small, native macOS app for opening a video, finding the exact frame you want, and saving it as an image.
 
 ## What it does
 
@@ -9,6 +9,8 @@ Shotgrabber is a small, native macOS app for opening a video, finding the exact 
 - Plays and scrubs video with a deliberately minimal interface.
 - Steps backward or forward by one source frame with the arrow keys, comma/period, or K+J/K+L.
 - Saves the current frame with **Command-S**, or copies it to the clipboard with **Command-C**.
+- Shows the position as timecode, frame number, or minutes and seconds; click the time to switch.
+- Previews frames when you hover over the timeline.
 - Command-clicks the overlay button to turn a loaded PNG overlay on or off without opening its menu.
 - Exports PNG, JPEG, HEIC, or TIFF.
 - Either asks where to save every capture or remembers a destination folder.
@@ -16,13 +18,13 @@ Shotgrabber is a small, native macOS app for opening a video, finding the exact 
 
 ## Build
 
-Open `Shotputr.xcodeproj` in Xcode and run the `Shotputr` scheme, or build from Terminal:
+Open `Pluck.xcodeproj` in Xcode and run the `Pluck` scheme, or build from Terminal:
 
 ```sh
-xcodebuild -project Shotputr.xcodeproj -scheme Shotputr -configuration Debug build
+xcodebuild -project Pluck.xcodeproj -scheme Pluck -configuration Debug build
 ```
 
-Shotgrabber targets macOS 26 or later so it can use the same native Liquid Glass controls as its sister app, Filmify. It uses only Apple frameworks (SwiftUI, AppKit, AVFoundation, and UniformTypeIdentifiers).
+Pluck targets macOS 26 or later so it can use the same native Liquid Glass controls as its sister app, Filmify. It uses only Apple frameworks (SwiftUI, AppKit, AVFoundation, and UniformTypeIdentifiers).
 
 ## Keyboard shortcuts
 
