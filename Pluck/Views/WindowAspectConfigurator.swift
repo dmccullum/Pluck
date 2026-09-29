@@ -32,6 +32,13 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func applyConfiguration(to window: NSWindow, coordinator: Coordinator) {
+        // Content always runs under the title bar, as `.hiddenTitleBar` set it up.
+        // Toggling this makes SwiftUI re-grow the window by the title bar height,
+        // pushing it down the screen, so only the title bar's appearance changes.
+        if !window.styleMask.contains(.fullSizeContentView) {
+            window.styleMask.insert(.fullSizeContentView)
+        }
+
         if hasVideo, aspectRatio.isFinite, aspectRatio > 0 {
             configureVideoTitlebar(window, coordinator: coordinator)
             configureVideoWindow(window, aspectRatio: CGFloat(aspectRatio), coordinator: coordinator)
@@ -45,9 +52,6 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func configureStandardTitlebar(_ window: NSWindow, coordinator: Coordinator) {
-        if window.styleMask.contains(.fullSizeContentView) {
-            window.styleMask.remove(.fullSizeContentView)
-        }
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = false
         window.titlebarSeparatorStyle = .automatic
@@ -60,9 +64,6 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func configureVideoTitlebar(_ window: NSWindow, coordinator: Coordinator) {
-        if !window.styleMask.contains(.fullSizeContentView) {
-            window.styleMask.insert(.fullSizeContentView)
-        }
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
@@ -157,7 +158,7 @@ struct WindowAspectConfigurator: NSViewRepresentable {
         let targetFrameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: targetContentSize)).size
         let targetFrame = NSRect(
             x: oldFrame.midX - targetFrameSize.width / 2,
-            y: oldFrame.maxY - targetFrameSize.height,
+            y: oldFrame.midY - targetFrameSize.height / 2,
             width: targetFrameSize.width,
             height: targetFrameSize.height
         ).constrained(to: visibleFrame)
@@ -177,23 +178,21 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func configureDropWindow(_ window: NSWindow, coordinator: Coordinator) {
-        window.contentAspectRatio = NSSize(width: 1, height: 1)
-        let minimumContentSize = NSSize(width: 400, height: 400)
-        window.contentMinSize = minimumContentSize
-        window.minSize = window.frameRect(
-            forContentRect: NSRect(origin: .zero, size: minimumContentSize)
-        ).size
+        // The drop area below the visible title bar is kept square.
+        let titlebarHeight = window.frame.height - window.contentLayoutRect.height
+        let targetFrameSize = NSSize(width: 480, height: 480 + titlebarHeight)
+        window.contentAspectRatio = targetFrameSize
+        let minimumContentSize = NSSize(width: 400, height: 400 + titlebarHeight)
+        applyMinimumContentSize(minimumContentSize, to: window)
 
         guard !coordinator.configuredForDropState else { return }
         coordinator.configuredForDropState = true
 
         let visibleFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
         let oldFrame = window.frame
-        let targetContentSize = NSSize(width: 480, height: 480)
-        let targetFrameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: targetContentSize)).size
         let targetFrame = NSRect(
             x: oldFrame.midX - targetFrameSize.width / 2,
-            y: oldFrame.maxY - targetFrameSize.height,
+            y: oldFrame.midY - targetFrameSize.height / 2,
             width: targetFrameSize.width,
             height: targetFrameSize.height
         )
