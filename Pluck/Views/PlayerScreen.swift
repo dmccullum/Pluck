@@ -137,7 +137,9 @@ struct PlayerScreen: View {
                 Spacer()
 
                 HStack {
-                    SafeZoneButton(model: model, isPopoverPresented: $isSafeZonePopoverPresented)
+                    if model.supportsSafeZone {
+                        SafeZoneButton(model: model, isPopoverPresented: $isSafeZonePopoverPresented)
+                    }
                     Spacer()
                     FrameActionButtons(model: model)
                 }
@@ -161,7 +163,9 @@ struct PlayerScreen: View {
                 VStack {
                     Spacer()
                     HStack {
-                        SafeZoneButton(model: model, isPopoverPresented: $isSafeZonePopoverPresented)
+                        if model.supportsSafeZone {
+                            SafeZoneButton(model: model, isPopoverPresented: $isSafeZonePopoverPresented)
+                        }
                         Spacer()
                     }
                     .padding(.leading, 24)
@@ -351,12 +355,12 @@ private struct VideoCanvas: View {
             ZStack {
                 VideoSurface(player: player)
 
-                if model.safeZone != .off {
-                    SafeZoneGuide(zone: model.safeZone)
+                if model.activeSafeZone != .off {
+                    SafeZoneGuide(zone: model.activeSafeZone)
                         .transition(.opacity)
                 }
             }
-            .animation(.easeOut(duration: 0.2), value: model.safeZone)
+            .animation(.easeOut(duration: 0.2), value: model.activeSafeZone)
             .frame(width: canvasSize.width, height: canvasSize.height)
             .clipped()
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)

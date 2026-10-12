@@ -46,6 +46,11 @@ final class VideoPlayerModel: ObservableObject {
 
     var documentOpener: ((URL) -> Void)?
 
+    /// Safe zone guides only make sense for vertical (portrait) video for now.
+    var supportsSafeZone: Bool { hasVideo && videoAspectRatio < 1 }
+    /// The zone actually shown and burned into captures: off unless the video is vertical.
+    var activeSafeZone: SafeZone { supportsSafeZone ? safeZone : .off }
+
     var hasVideo: Bool { player != nil && videoURL != nil }
     var isPlaying: Bool { shuttleRate != 0 }
     var isCapturing: Bool { frameOperation != nil }
@@ -110,6 +115,7 @@ final class VideoPlayerModel: ObservableObject {
 
     /// Turns the guide off, or back on to the zone used most recently (Reels at first).
     func toggleSafeZone() {
+        guard supportsSafeZone else { return }
         if safeZone != .off {
             setSafeZone(.off)
         } else {
@@ -516,7 +522,7 @@ final class VideoPlayerModel: ObservableObject {
                 generator.requestedTimeToleranceAfter = .zero
 
                 let (image, _) = try await generator.image(at: captureTime)
-                let capturedImage = self.includesSafeZoneInCaptures ? Self.drawing(self.safeZone, onto: image) : image
+                let capturedImage = self.includesSafeZoneInCaptures && self.activeSafeZone != .off ? Self.drawing(self.activeSafeZone, onto: image) : image
                 let thumbnail = Self.thumbnail(of: capturedImage)
                 switch operation {
                 case .save:
