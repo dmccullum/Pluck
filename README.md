@@ -5,8 +5,7 @@
 <h1 align="center">Pluck</h1>
 
 <p align="center">
-  Find the exact frame in any video and save it as an image.<br>
-  A tiny, native macOS app with Liquid Glass controls.
+  Step through a video frame by frame and save any frame as an image.
 </p>
 
 <p align="center">
@@ -15,14 +14,14 @@
 
 ## Features
 
-- **Frame-accurate stepping.** Move one source frame at a time with the arrow keys, comma and period, or K+J / K+L.
-- **Save or copy.** Press <kbd>⌘S</kbd> to save the current frame, or <kbd>⌘C</kbd> to copy it to the clipboard. Exports PNG, JPEG, HEIC, or TIFF.
-- **Hover to preview.** Scrub the timeline and see the frame under your pointer before you commit.
-- **Safe zone guides for 9:16 video.** Overlay the Instagram Reels or Meta ads safe areas, and optionally burn them into saved and copied frames. The button only appears on 9:16 videos.
-- **Minimal by design.** The title bar and controls fade away when you stop moving, and the window matches your video's aspect ratio.
-- **One window per video.** Every video gets its own window and playback state.
-- **Timecode your way.** Click the time to switch between timecode, frame number, and minutes and seconds.
-- **Open anywhere.** Drop a video on the window or the app icon, use Open With, or press <kbd>⌘O</kbd>.
+- Step one source frame at a time with the arrow keys, comma and period, or K+J / K+L.
+- Save the current frame with <kbd>⌘S</kbd> or copy it with <kbd>⌘C</kbd>. Formats: PNG, JPEG, HEIC, TIFF.
+- Hover over the timeline to preview the frame under the pointer.
+- Show Instagram Reels or Meta ads safe zone guides on 9:16 videos, and optionally include them in saved and copied frames.
+- The title bar and controls fade out after a few seconds without pointer movement. The window resizes to the video's aspect ratio.
+- Each video opens in its own window with its own playback state.
+- Click the time to switch between timecode, frame number, and minutes and seconds.
+- Open a video by dropping it on the window or the app icon, with Open With, or with <kbd>⌘O</kbd>.
 
 ## Install
 
