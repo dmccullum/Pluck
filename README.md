@@ -5,7 +5,7 @@
 <h1 align="center">Pluck</h1>
 
 <p align="center">
-  Step through a video frame by frame and save any frame as an image.
+  Play or step through a video frame by frame and save any frame as an image.
 </p>
 
 <p align="center">
