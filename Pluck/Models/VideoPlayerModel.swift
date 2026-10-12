@@ -46,9 +46,9 @@ final class VideoPlayerModel: ObservableObject {
 
     var documentOpener: ((URL) -> Void)?
 
-    /// Safe zone guides only make sense for vertical (portrait) video for now.
-    var supportsSafeZone: Bool { hasVideo && videoAspectRatio < 1 }
-    /// The zone actually shown and burned into captures: off unless the video is vertical.
+    /// Safe zone guides are designed for 9:16 video, so they're only offered for that (with a little tolerance for odd pixel sizes).
+    var supportsSafeZone: Bool { hasVideo && abs(videoAspectRatio - 9.0 / 16.0) < 0.01 }
+    /// The zone actually shown and burned into captures: off unless the video is 9:16.
     var activeSafeZone: SafeZone { supportsSafeZone ? safeZone : .off }
 
     var hasVideo: Bool { player != nil && videoURL != nil }

@@ -18,7 +18,7 @@
 - **Frame-accurate stepping.** Move one source frame at a time with the arrow keys, comma and period, or K+J / K+L.
 - **Save or copy.** Press <kbd>⌘S</kbd> to save the current frame, or <kbd>⌘C</kbd> to copy it to the clipboard. Exports PNG, JPEG, HEIC, or TIFF.
 - **Hover to preview.** Scrub the timeline and see the frame under your pointer before you commit.
-- **Safe zone guides for vertical video.** Overlay the Instagram Reels or Meta ads safe areas, and optionally burn them into saved and copied frames. The button only appears on vertical videos.
+- **Safe zone guides for 9:16 video.** Overlay the Instagram Reels or Meta ads safe areas, and optionally burn them into saved and copied frames. The button only appears on 9:16 videos.
 - **Minimal by design.** The title bar and controls fade away when you stop moving, and the window matches your video's aspect ratio.
 - **One window per video.** Every video gets its own window and playback state.
 - **Timecode your way.** Click the time to switch between timecode, frame number, and minutes and seconds.
