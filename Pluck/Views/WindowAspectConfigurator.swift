@@ -52,9 +52,13 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func configureStandardTitlebar(_ window: NSWindow, coordinator: Coordinator) {
+        let wasTransparent = window.titlebarAppearsTransparent
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = false
         window.titlebarSeparatorStyle = .automatic
+        if wasTransparent {
+            refreshTitlebarMaterial(in: window)
+        }
         coordinator.chromeVisible = nil
         for button in windowButtons(in: window) {
             button.isHidden = false
@@ -91,6 +95,32 @@ struct WindowAspectConfigurator: NSViewRepresentable {
                 for button in buttons { button.isHidden = true }
             }
         }
+    }
+
+    /// Turning off `titlebarAppearsTransparent` on a visible window leaves the
+    /// title bar's material stale (drawn solid, without the content blurred
+    /// behind it) until the window's key state changes. Cycling each
+    /// material view's state forces the redraw that a key change would.
+    private func refreshTitlebarMaterial(in window: NSWindow) {
+        DispatchQueue.main.async {
+            guard let titlebarContainer = window.standardWindowButton(.closeButton)?.superview?.superview else { return }
+            for effectView in visualEffectViews(in: titlebarContainer) {
+                let state = effectView.state
+                effectView.state = state == .active ? .inactive : .active
+                effectView.state = state
+                effectView.needsDisplay = true
+            }
+            titlebarContainer.needsLayout = true
+            titlebarContainer.needsDisplay = true
+        }
+    }
+
+    private func visualEffectViews(in view: NSView) -> [NSVisualEffectView] {
+        var result = view.subviews.compactMap { $0 as? NSVisualEffectView }
+        for subview in view.subviews {
+            result += visualEffectViews(in: subview)
+        }
+        return result
     }
 
     private func windowButtons(in window: NSWindow) -> [NSButton] {
