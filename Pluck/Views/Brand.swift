@@ -1,3 +1,4 @@
+import DMKit
 import SwiftUI
 
 /// Colors lifted from the app icon so the UI and the icon read as one thing.
@@ -215,8 +216,8 @@ private struct HUDIconButtonBody: View {
             }
             .contentShape(Circle())
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.14), value: isHovered)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .dmAnimation(.snappy, value: isHovered)
+            .dmAnimation(.snappy, value: configuration.isPressed)
             .onHover { isHovered = $0 }
     }
 }

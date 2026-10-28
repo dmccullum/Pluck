@@ -1,3 +1,4 @@
+import DMKit
 import SwiftUI
 
 /// Timeline scrubber with a QuickTime-style frame preview while hovering.
@@ -97,8 +98,8 @@ struct Scrubber: View {
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94, anchor: .bottom)))
                 }
             }
-            .animation(.easeOut(duration: 0.14), value: isActive)
-            .animation(.easeOut(duration: 0.14), value: hoverX == nil)
+            .dmAnimation(.snappy, value: isActive)
+            .dmAnimation(.snappy, value: hoverX == nil)
         }
         .frame(height: 16)
         .accessibilityRepresentation {

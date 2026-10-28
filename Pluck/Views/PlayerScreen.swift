@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import DMKit
 import SwiftUI
 
 struct PlayerScreen: View {
@@ -53,7 +54,7 @@ struct PlayerScreen: View {
         }
         .background(.black)
         .ignoresSafeArea(edges: .top)
-        .animation(.easeOut(duration: 0.22), value: model.controlsVisible)
+        .dmAnimation(.smooth, value: model.controlsVisible)
         .onChange(of: model.isPlaying) { _, _ in
             showControls(andScheduleHide: true)
         }
@@ -573,6 +574,9 @@ private extension EnvironmentValues {
     }
 }
 
+// Not a DMKit FloatingBar: the bar is a single-row capsule, and the HUD is two rows (transport
+// over time, scrubber, time) whose time labels sit in the corners a capsule would round off.
+// TODO(DMKit): FloatingBar taking a shape (or a multi-row layout) would let this adopt it.
 private struct PlaybackHUD: View {
     var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
@@ -645,7 +649,7 @@ private struct PlaybackHUD: View {
         .padding(.bottom, 13)
         .glassEffect(
             .regular.tint(.black.opacity(0.22)),
-            in: .rect(cornerRadius: 22)
+            in: .rect(cornerRadius: DMRadius.large)
         )
         .foregroundStyle(.white)
         .opacity(controlsVisible ? 1 : 0)
