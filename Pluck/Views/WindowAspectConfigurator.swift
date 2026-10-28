@@ -35,6 +35,11 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     private func applyConfiguration(to window: NSWindow, coordinator: Coordinator) {
         onWindowAvailable(window)
 
+        // A tab group shares one frame, which can't hold each video's aspect ratio.
+        // Turning off automatic tabbing also removes View › Show Tab Bar.
+        NSWindow.allowsAutomaticWindowTabbing = false
+        window.tabbingMode = .disallowed
+
         // Content always runs under the title bar, as `.hiddenTitleBar` set it up.
         // Toggling this makes SwiftUI re-grow the window by the title bar height,
         // pushing it down the screen, so only the title bar's appearance changes.
