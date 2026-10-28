@@ -3,7 +3,7 @@ import AVFoundation
 import SwiftUI
 
 struct PlayerScreen: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     let player: AVPlayer
 
     @State private var hideControlsTask: Task<Void, Never>?
@@ -308,11 +308,13 @@ private final class PointerTrackingNSView: NSView {
             object: window,
             queue: .main
         ) { [weak self] _ in
-            self?.isKHeld = false
+            MainActor.assumeIsolated {
+                self?.isKHeld = false
+            }
         }
     }
 
-    deinit {
+    isolated deinit {
         if let eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
         }
@@ -345,7 +347,7 @@ private final class PointerTrackingNSView: NSView {
 }
 
 private struct VideoCanvas: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     let player: AVPlayer
 
     var body: some View {
@@ -391,8 +393,9 @@ private func fittedCanvasSize(aspectRatio videoAspectRatio: Double, in available
 }
 
 private struct SafeZoneButton: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var isPopoverPresented: Bool
 
     var body: some View {
@@ -409,7 +412,7 @@ private struct SafeZoneButton: View {
             SafeZonePopover(model: model)
         }
         .opacity(controlsVisible ? 1 : 0)
-        .scaleEffect(controlsVisible ? 1 : 0.92)
+        .scaleEffect(controlsVisible || reduceMotion ? 1 : 0.92)
         .allowsHitTesting(controlsVisible)
     }
 
@@ -435,7 +438,7 @@ private struct SafeZoneButton: View {
 }
 
 private struct SafeZonePopover: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -512,8 +515,9 @@ private extension EnvironmentValues {
 }
 
 private struct PlaybackHUD: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(PreferenceKey.timeDisplay) private var timeDisplayRaw = TimeDisplay.timecode.rawValue
 
     private var timeDisplay: TimeDisplay {
@@ -582,13 +586,12 @@ private struct PlaybackHUD: View {
         .padding(.top, 8)
         .padding(.bottom, 13)
         .glassEffect(
-            .regular.tint(.black.opacity(0.22)),
+            .regular.tint(.black.opacity(0.22)).interactive(),
             in: .rect(cornerRadius: 22)
         )
         .foregroundStyle(.white)
-        .shadow(color: .black.opacity(0.3), radius: 24, y: 10)
         .opacity(controlsVisible ? 1 : 0)
-        .offset(y: controlsVisible ? 0 : 8)
+        .offset(y: controlsVisible || reduceMotion ? 0 : 8)
         .allowsHitTesting(controlsVisible)
     }
 
@@ -640,22 +643,25 @@ private struct PlaybackHUD: View {
 }
 
 private struct FrameActionButtons: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 8) {
-            FrameActionButton(model: model, operation: .copy)
-            FrameActionButton(model: model, operation: .save)
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                FrameActionButton(model: model, operation: .copy)
+                FrameActionButton(model: model, operation: .save)
+            }
         }
         .opacity(controlsVisible ? 1 : 0)
-        .scaleEffect(controlsVisible ? 1 : 0.92)
+        .scaleEffect(controlsVisible || reduceMotion ? 1 : 0.92)
         .allowsHitTesting(controlsVisible)
     }
 }
 
 private struct FrameActionButton: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     let operation: FrameOperation
 
     private var isWorking: Bool {
@@ -740,6 +746,7 @@ private struct CaptureFlightView: View {
     let canvas: CGRect
     let target: CGPoint
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var flash = 0.5
     @State private var launched = false
     @State private var landed = false
@@ -775,6 +782,11 @@ private struct CaptureFlightView: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.4)) {
                 flash = 0
+            }
+            // With Reduce Motion, keep the flash and skip the flight into the button.
+            guard !reduceMotion else {
+                landed = true
+                return
             }
             withAnimation(.spring(response: 0.55, dampingFraction: 0.86).delay(0.06)) {
                 launched = true

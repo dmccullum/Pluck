@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct DropScreen: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     let isTargeted: Bool
     @Environment(\.openSettings) private var openSettings
     @AppStorage(PreferenceKey.captureFormat) private var captureFormat = CaptureFormat.png.rawValue
     @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
     @AppStorage(PreferenceKey.folderDisplayPath) private var folderDisplayPath = ""
     @State private var hasAppeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -15,7 +16,7 @@ struct DropScreen: View {
 
             VStack(spacing: 0) {
                 PluckMark(plucked: isTargeted ? 1 : (hasAppeared ? 0.82 : 0), size: 124)
-                    .scaleEffect(isTargeted ? 1.08 : 1)
+                    .scaleEffect(isTargeted && !reduceMotion ? 1.08 : 1)
                     .padding(.bottom, 14)
 
                 Text(isTargeted ? "Let go to open" : "Drop a video to begin")
@@ -59,6 +60,10 @@ struct DropScreen: View {
         }
         .animation(.spring(response: 0.36, dampingFraction: 0.74), value: isTargeted)
         .task {
+            guard !reduceMotion else {
+                hasAppeared = true
+                return
+            }
             try? await Task.sleep(for: .milliseconds(180))
             withAnimation(.spring(response: 0.7, dampingFraction: 0.7)) {
                 hasAppeared = true
@@ -106,7 +111,7 @@ struct DropScreen: View {
         .foregroundStyle(.primary.opacity(0.85))
         .padding(.horizontal, 16)
         .frame(height: 36)
-        .glassEffect(.regular, in: .capsule)
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 
     private var destinationTitle: String {

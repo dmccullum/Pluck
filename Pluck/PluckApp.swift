@@ -2,15 +2,11 @@ import SwiftUI
 
 @main
 struct PluckApp: App {
-    @StateObject private var windowState = AppWindowState()
+    @State private var windowState = AppWindowState()
 
     var body: some Scene {
-        WindowGroup("Pluck", id: "main", for: URL.self) { $documentURL in
-            VideoDocumentWindow(
-                initialURL: documentURL,
-                isMainWindow: documentURL == nil,
-                windowState: windowState
-            )
+        WindowGroup("Pluck", id: "main", for: VideoReference.self) { $reference in
+            VideoDocumentWindow(reference: $reference, windowState: windowState)
         }
         .defaultSize(width: 480, height: 480)
         .windowStyle(.hiddenTitleBar)
@@ -29,16 +25,20 @@ struct PluckApp: App {
         .defaultPosition(.center)
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
+        .windowBackgroundDragBehavior(.enabled)
+        .restorationBehavior(.disabled)
     }
 }
 
 private struct VideoDocumentWindow: View {
-    let initialURL: URL?
-    let isMainWindow: Bool
-    @ObservedObject var windowState: AppWindowState
+    /// The window's restorable value: nil for an empty window until it opens a video.
+    @Binding var reference: VideoReference?
+    var windowState: AppWindowState
 
-    @StateObject private var model = VideoPlayerModel()
+    @State private var model = VideoPlayerModel()
     @State private var windowIdentity = UUID()
+    /// Whether this window started empty, captured once so opening a video doesn't change it.
+    @State private var isMainWindow: Bool?
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -50,48 +50,61 @@ private struct VideoDocumentWindow: View {
                     hasVideo: model.hasVideo,
                     controlsVisible: model.controlsVisible,
                     presentationID: model.presentationID,
+                    onWindowAvailable: { window in
+                        model.window = window
+                    },
                     onPresentationReady: { id in
                         model.finishPresentation(id: id)
                     }
                 )
             }
             .focusedSceneValue(\.videoDocumentActions, actions)
-            .task(id: initialURL) {
-                guard let initialURL, model.videoURL != initialURL else { return }
-                model.open(url: initialURL)
+            .task(id: reference) {
+                guard let reference, model.videoURL != reference.url else { return }
+                model.open(url: reference.resolve())
+            }
+            .onChange(of: model.videoURL) { _, url in
+                // Keep the restorable value in step, so a relaunch reopens this window's video.
+                if let url, url != reference?.url {
+                    reference = VideoReference(url: url)
+                }
             }
             .onAppear {
-                if isMainWindow {
+                if isMainWindow == nil {
+                    isMainWindow = reference == nil
+                }
+                if isMainWindow == true {
                     windowState.setMainWindow(id: windowIdentity, visible: true)
                 }
-                model.documentOpener = { [weak model] url in
-                    guard let model else { return }
-                    if model.hasVideo {
-                        openWindow(value: url)
-                    } else {
-                        model.open(url: url)
-                    }
+                model.documentOpener = { [model] url in
+                    open(url, in: model)
                 }
             }
             .onDisappear {
                 model.stopPlayback()
                 model.documentOpener = nil
-                if isMainWindow {
+                if isMainWindow == true {
                     windowState.setMainWindow(id: windowIdentity, visible: false)
                 }
             }
             .onOpenURL { url in
-                if model.hasVideo {
-                    openWindow(value: url)
-                } else {
-                    model.open(url: url)
-                }
+                open(url, in: model)
             }
+    }
+
+    /// Opens `url` here if this window is empty, otherwise in a new window.
+    private func open(_ url: URL, in model: VideoPlayerModel) {
+        if model.hasVideo {
+            openWindow(value: VideoReference(url: url))
+        } else {
+            model.open(url: url)
+        }
     }
 
     private var actions: VideoDocumentActions {
         VideoDocumentActions(
             openVideo: model.presentOpenPanel,
+            openURL: model.requestOpen(url:),
             captureFrame: model.captureCurrentFrame,
             copyFrame: model.copyCurrentFrame,
             togglePlayback: model.togglePlayback,
@@ -111,9 +124,9 @@ private struct VideoDocumentWindow: View {
     }
 }
 
-@MainActor
-private final class AppWindowState: ObservableObject {
-    @Published private var visibleMainWindowIDs: Set<UUID> = []
+@Observable
+private final class AppWindowState {
+    private var visibleMainWindowIDs: Set<UUID> = []
 
     var isMainWindowVisible: Bool {
         !visibleMainWindowIDs.isEmpty
@@ -130,6 +143,7 @@ private final class AppWindowState: ObservableObject {
 
 private struct VideoDocumentActions {
     let openVideo: () -> Void
+    let openURL: (URL) -> Void
     let captureFrame: () -> Void
     let copyFrame: () -> Void
     let togglePlayback: () -> Void
@@ -160,7 +174,8 @@ private extension FocusedValues {
 
 private struct VideoDocumentCommands: Commands {
     @FocusedValue(\.videoDocumentActions) private var actions
-    @ObservedObject var windowState: AppWindowState
+    var windowState: AppWindowState
+    var recents = RecentVideos.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
@@ -177,6 +192,21 @@ private struct VideoDocumentCommands: Commands {
             }
             .keyboardShortcut("o", modifiers: .command)
             .disabled(actions == nil)
+
+            Menu("Open Recent") {
+                ForEach(recents.videos, id: \.self) { video in
+                    Button(video.url.lastPathComponent) {
+                        openRecent(video)
+                    }
+                }
+                if !recents.videos.isEmpty {
+                    Divider()
+                }
+                Button("Clear Menu") {
+                    recents.clear()
+                }
+                .disabled(recents.videos.isEmpty)
+            }
         }
 
         CommandGroup(after: .saveItem) {
@@ -272,6 +302,15 @@ private struct VideoDocumentCommands: Commands {
 
                 Divider()
             }
+        }
+    }
+
+    private func openRecent(_ video: VideoReference) {
+        // An empty window opens it in place; otherwise the new window resolves the bookmark itself.
+        if let actions, !actions.hasVideo {
+            actions.openURL(video.resolve())
+        } else {
+            openWindow(value: video)
         }
     }
 }

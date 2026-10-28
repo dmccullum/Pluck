@@ -7,6 +7,7 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     let hasVideo: Bool
     let controlsVisible: Bool
     let presentationID: UUID
+    let onWindowAvailable: (NSWindow) -> Void
     let onPresentationReady: (UUID) -> Void
 
     func makeNSView(context: Context) -> WindowObservationView {
@@ -32,6 +33,8 @@ struct WindowAspectConfigurator: NSViewRepresentable {
     }
 
     private func applyConfiguration(to window: NSWindow, coordinator: Coordinator) {
+        onWindowAvailable(window)
+
         // Content always runs under the title bar, as `.hiddenTitleBar` set it up.
         // Toggling this makes SwiftUI re-grow the window by the title bar height,
         // pushing it down the screen, so only the title bar's appearance changes.

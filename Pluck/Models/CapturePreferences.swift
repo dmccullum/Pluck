@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import UniformTypeIdentifiers
 
-enum CaptureFormat: String, CaseIterable, Identifiable {
+nonisolated enum CaptureFormat: String, CaseIterable, Identifiable, Sendable {
     case png
     case jpeg
     case heic
@@ -69,6 +69,7 @@ enum PreferenceKey {
     static let safeZone = "safeZone"
     static let safeZoneInCaptures = "safeZoneInCaptures"
     static let lastSafeZone = "lastSafeZone"
+    static let recentVideos = "recentVideos"
 }
 
 enum TimeDisplay: String, CaseIterable {
@@ -124,7 +125,7 @@ enum FolderBookmarkStore {
     }
 }
 
-enum CaptureFileName {
+nonisolated enum CaptureFileName {
     static func make(videoURL: URL, seconds: Double, extension fileExtension: String) -> String {
         let stem = videoURL.deletingPathExtension().lastPathComponent
         let invalidCharacters = CharacterSet(charactersIn: "/:")
@@ -140,7 +141,7 @@ enum CaptureFileName {
 }
 
 /// Guides for where a platform's interface covers a 9:16 frame. Percentages are of the frame.
-enum SafeZone: String, CaseIterable, Identifiable {
+nonisolated enum SafeZone: String, CaseIterable, Identifiable, Sendable {
     case off
     /// Measured from Instagram's Edits app: 13% top, 20% bottom, 4.5% sides, plus a
     /// 17%-wide notch from 63% down for the like/comment/share buttons.
@@ -173,5 +174,74 @@ enum SafeZone: String, CaseIterable, Identifiable {
              CGPoint(x: 0.94, y: 0.60), CGPoint(x: 0.79, y: 0.60),
              CGPoint(x: 0.79, y: 0.65), CGPoint(x: 0.06, y: 0.65)]
         }
+    }
+}
+
+/// A video file plus a security-scoped bookmark to it, so a sandboxed relaunch can open
+/// it again. Video windows are keyed by this for state restoration, and Open Recent lists them.
+nonisolated struct VideoReference: Codable, Hashable, Sendable {
+    let url: URL
+    let bookmark: Data?
+
+    /// Call while the app still has access to `url`, such as right after the user opens it.
+    init(url: URL) {
+        self.url = url
+        bookmark = try? url.bookmarkData(
+            options: .withSecurityScope,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+    }
+
+    /// The bookmarked file, wherever it has moved to, or the saved path if the bookmark fails.
+    func resolve() -> URL {
+        guard let bookmark else { return url }
+        var isStale = false
+        return (try? URL(
+            resolvingBookmarkData: bookmark,
+            options: .withSecurityScope,
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )) ?? url
+    }
+
+    static func == (lhs: VideoReference, rhs: VideoReference) -> Bool {
+        lhs.url == rhs.url
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(url)
+    }
+}
+
+/// The File > Open Recent list, newest first. Also feeds the Dock menu's recent items.
+@Observable
+final class RecentVideos {
+    static let shared = RecentVideos()
+    private static let limit = 10
+
+    private(set) var videos: [VideoReference]
+
+    private init() {
+        let data = UserDefaults.standard.data(forKey: PreferenceKey.recentVideos)
+        videos = data.flatMap { try? JSONDecoder().decode([VideoReference].self, from: $0) } ?? []
+    }
+
+    func note(_ url: URL) {
+        NSDocumentController.shared.noteNewRecentDocumentURL(url)
+        videos.removeAll { $0.url == url }
+        videos.insert(VideoReference(url: url), at: 0)
+        videos = Array(videos.prefix(Self.limit))
+        save()
+    }
+
+    func clear() {
+        NSDocumentController.shared.clearRecentDocuments(nil)
+        videos = []
+        save()
+    }
+
+    private func save() {
+        UserDefaults.standard.set(try? JSONEncoder().encode(videos), forKey: PreferenceKey.recentVideos)
     }
 }

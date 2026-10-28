@@ -33,7 +33,7 @@ struct AboutView: View {
         }
         .frame(width: 420, height: 350)
         .foregroundStyle(.white)
-        .background {
+        .containerBackground(for: .window) {
             ZStack {
                 LinearGradient(
                     colors: [
@@ -52,9 +52,8 @@ struct AboutView: View {
                     endRadius: 330
                 )
             }
-            .ignoresSafeArea()
         }
-        .background(AboutWindowConfigurator())
+        .windowMinimizeBehavior(.disabled)
     }
 
     private var workflow: some View {
@@ -92,34 +91,5 @@ struct AboutView: View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "Version \(version) (\(build))"
-    }
-}
-
-private struct AboutWindowConfigurator: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            configure(view.window)
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            configure(nsView.window)
-        }
-    }
-
-    private func configure(_ window: NSWindow?) {
-        guard let window else { return }
-        window.styleMask.insert(.fullSizeContentView)
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        window.titlebarSeparatorStyle = .none
-        window.isMovableByWindowBackground = true
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        window.standardWindowButton(.zoomButton)?.isHidden = true
     }
 }

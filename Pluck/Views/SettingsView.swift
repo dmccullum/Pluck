@@ -82,15 +82,17 @@ struct SettingsView: View {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
 
-        if panel.runModal() == .OK, let folderURL = panel.url {
-            do {
-                try FolderBookmarkStore.save(folderURL)
-                folderDisplayPath = folderURL.path
-            } catch {
+        Task {
+            if let folderURL = await panel.present(in: NSApp.keyWindow) {
+                do {
+                    try FolderBookmarkStore.save(folderURL)
+                    folderDisplayPath = folderURL.path
+                } catch {
+                    saveDestination = SaveDestination.askEveryTime.rawValue
+                }
+            } else if folderDisplayPath.isEmpty {
                 saveDestination = SaveDestination.askEveryTime.rawValue
             }
-        } else if folderDisplayPath.isEmpty {
-            saveDestination = SaveDestination.askEveryTime.rawValue
         }
     }
 }

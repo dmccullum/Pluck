@@ -21,7 +21,9 @@
 - The title bar and controls fade out after a few seconds without pointer movement. The window resizes to the video's aspect ratio.
 - Each video opens in its own window with its own playback state.
 - Click the time to switch between timecode, frame number, and minutes and seconds.
-- Open a video by dropping it on the window or the app icon, with Open With, or with <kbd>⌘O</kbd>.
+- Open a video by dropping it on the window or the app icon, with Open With, with <kbd>⌘O</kbd>, or from File › Open Recent.
+- Windows reopen with their videos after you quit and relaunch.
+- The Shortcuts action Extract Frame from Video takes a video, a time in seconds, and a format, and returns the frame as an image.
 
 ## Install
 
@@ -37,7 +39,7 @@ Or open `Pluck.xcodeproj` in Xcode and run the `Pluck` scheme, or from Terminal:
 xcodebuild -project Pluck.xcodeproj -scheme Pluck -configuration Release build
 ```
 
-Pluck uses only Apple frameworks: SwiftUI, AppKit, AVFoundation, and UniformTypeIdentifiers.
+Pluck uses only Apple frameworks: SwiftUI, AppKit, AVFoundation, AppIntents, and UniformTypeIdentifiers.
 
 ## Keyboard shortcuts
 

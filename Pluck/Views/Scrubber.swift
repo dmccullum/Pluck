@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Timeline scrubber with a QuickTime-style frame preview while hovering.
 struct Scrubber: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     /// How far above the track the preview floats, so it can clear surrounding controls.
     var previewLift: CGFloat = 16
     let label: (Double) -> String
@@ -11,6 +11,7 @@ struct Scrubber: View {
     @State private var previewImage: CGImage?
     @State private var previewTask: Task<Void, Never>?
     @State private var isDragging = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The preview image fits inside this box, so portrait video gets a narrower
     /// preview rather than a taller one.
@@ -93,7 +94,7 @@ struct Scrubber: View {
                             x: min(max(hoverX - previewWidth / 2, -24), width - previewWidth + 24),
                             y: -(proxy.size.height + previewLift)
                         )
-                        .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .bottom)))
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94, anchor: .bottom)))
                 }
             }
             .animation(.easeOut(duration: 0.14), value: isActive)
@@ -120,7 +121,7 @@ struct Scrubber: View {
                 }
             }
             .frame(width: previewImageSize.width, height: previewImageSize.height)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(ConcentricRectangle(corners: .concentric(minimum: .fixed(8)), isUniform: true))
 
             Text(label(seconds))
                 .font(.system(size: 11, weight: .semibold))
@@ -130,8 +131,8 @@ struct Scrubber: View {
         .padding(previewPadding)
         .padding(.bottom, 1)
         .frame(width: previewWidth)
+        .containerShape(.rect(cornerRadius: 13))
         .glassEffect(.regular.tint(.black.opacity(0.35)), in: .rect(cornerRadius: 13))
-        .shadow(color: .black.opacity(0.3), radius: 14, y: 6)
         .allowsHitTesting(false)
     }
 

@@ -10,6 +10,8 @@
 		A10000000000000000000001 /* PluckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* PluckApp.swift */; };
 		A10000000000000000000002 /* CapturePreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* CapturePreferences.swift */; };
 		A10000000000000000000003 /* VideoPlayerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* VideoPlayerModel.swift */; };
+		A10000000000000000000010 /* FrameRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* FrameRenderer.swift */; };
+		A10000000000000000000011 /* ExtractFrameIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* ExtractFrameIntent.swift */; };
 		A10000000000000000000004 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* ContentView.swift */; };
 		A10000000000000000000005 /* DropScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* DropScreen.swift */; };
 		A10000000000000000000006 /* PlayerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* PlayerScreen.swift */; };
@@ -27,6 +29,8 @@
 		A20000000000000000000001 /* PluckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluckApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* CapturePreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturePreferences.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 /* VideoPlayerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* FrameRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRenderer.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 /* ExtractFrameIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractFrameIntent.swift; sourceTree = "<group>"; };
 		A20000000000000000000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000005 /* DropScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropScreen.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* PlayerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScreen.swift; sourceTree = "<group>"; };
@@ -78,6 +82,8 @@
 			children = (
 				A20000000000000000000002 /* CapturePreferences.swift */,
 				A20000000000000000000003 /* VideoPlayerModel.swift */,
+				A20000000000000000000020 /* FrameRenderer.swift */,
+				A20000000000000000000021 /* ExtractFrameIntent.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -145,7 +151,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					A50000000000000000000001 = {
 						CreatedOnToolsVersion = 26.2;
@@ -193,6 +199,8 @@
 				A1000000000000000000000E /* Scrubber.swift in Sources */,
 				A10000000000000000000002 /* CapturePreferences.swift in Sources */,
 				A10000000000000000000003 /* VideoPlayerModel.swift in Sources */,
+				A10000000000000000000010 /* FrameRenderer.swift in Sources */,
+				A10000000000000000000011 /* ExtractFrameIntent.swift in Sources */,
 				A10000000000000000000004 /* ContentView.swift in Sources */,
 				A10000000000000000000005 /* DropScreen.swift in Sources */,
 				A10000000000000000000006 /* PlayerScreen.swift in Sources */,
@@ -308,7 +316,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.danielmccullum.Pluck;
 				PRODUCT_NAME = Pluck;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -332,7 +342,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.danielmccullum.Pluck;
 				PRODUCT_NAME = Pluck;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};

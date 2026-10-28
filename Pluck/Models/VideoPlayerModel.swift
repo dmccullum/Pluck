@@ -1,50 +1,54 @@
 import AppKit
 import AVFoundation
 import Combine
-import ImageIO
+import Observation
 import UniformTypeIdentifiers
 
-@MainActor
-final class VideoPlayerModel: ObservableObject {
-    @Published private(set) var player: AVPlayer?
-    @Published private(set) var videoURL: URL?
-    @Published private(set) var duration: Double = 0
-    @Published private(set) var videoAspectRatio: Double = 16.0 / 9.0
-    @Published var currentTime: Double = 0
-    @Published private(set) var shuttleRate: Float = 0
-    @Published private(set) var controlsVisible = true
-    @Published private(set) var isScrubbing = false
-    @Published private(set) var isLoading = false
-    @Published private(set) var isPresentationReady = false
-    @Published private(set) var presentationID = UUID()
-    @Published private(set) var frameOperation: FrameOperation?
-    @Published var alertMessage: String?
-    @Published private(set) var toast: Toast?
-    @Published private(set) var captureFlight: CaptureFlight?
-    @Published private(set) var completedOperation: FrameOperation?
-    @Published private(set) var videoDimensions: CGSize = .zero
-    @Published private(set) var frameRate: Double = 30
-    @Published private(set) var safeZone: SafeZone
-    @Published private(set) var includesSafeZoneInCaptures: Bool
+@Observable
+final class VideoPlayerModel {
+    private(set) var player: AVPlayer?
+    private(set) var videoURL: URL?
+    private(set) var duration: Double = 0
+    private(set) var videoAspectRatio: Double = 16.0 / 9.0
+    var currentTime: Double = 0
+    private(set) var shuttleRate: Float = 0
+    private(set) var controlsVisible = true
+    private(set) var isScrubbing = false
+    private(set) var isLoading = false
+    private(set) var isPresentationReady = false
+    private(set) var presentationID = UUID()
+    private(set) var frameOperation: FrameOperation?
+    var alertMessage: String?
+    private(set) var toast: Toast?
+    private(set) var captureFlight: CaptureFlight?
+    private(set) var completedOperation: FrameOperation?
+    private(set) var videoDimensions: CGSize = .zero
+    private(set) var frameRate: Double = 30
+    private(set) var safeZone: SafeZone
+    private(set) var includesSafeZoneInCaptures: Bool
 
-    private var asset: AVAsset?
-    private var frameDuration = 1.0 / 30.0
-    private var mediaStartTime = CMTime.zero
-    private var timeObserver: Any?
-    private var timeControlCancellable: AnyCancellable?
-    private var presentationSizeCancellable: AnyCancellable?
-    private var securityScopedURL: URL?
-    private var rateBeforeScrub: Float = 0
-    private var manualShuttleTask: Task<Void, Never>?
-    private var loadTask: Task<Void, Never>?
-    private var toastTask: Task<Void, Never>?
-    private var completionTask: Task<Void, Never>?
-    private var previewGenerator: AVAssetImageGenerator?
-    private var previewCache: [Int: CGImage] = [:]
-    private var previewWarmupTask: Task<Void, Never>?
+    @ObservationIgnored private var asset: AVAsset?
+    @ObservationIgnored private var frameDuration = 1.0 / 30.0
+    @ObservationIgnored private var mediaStartTime = CMTime.zero
+    @ObservationIgnored private var timeObserver: Any?
+    @ObservationIgnored private var timeControlCancellable: AnyCancellable?
+    @ObservationIgnored private var presentationSizeCancellable: AnyCancellable?
+    @ObservationIgnored private var securityScopedURL: URL?
+    /// A file opened for security-scoped access while it loads, before it becomes `securityScopedURL`.
+    @ObservationIgnored private var pendingScopedURL: URL?
+    @ObservationIgnored private var rateBeforeScrub: Float = 0
+    @ObservationIgnored private var manualShuttleTask: Task<Void, Never>?
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var toastTask: Task<Void, Never>?
+    @ObservationIgnored private var completionTask: Task<Void, Never>?
+    @ObservationIgnored private var previewGenerator: PreviewFrameGenerator?
+    @ObservationIgnored private var previewCache: [Int: CGImage] = [:]
+    @ObservationIgnored private var previewWarmupTask: Task<Void, Never>?
     private static let previewBucketCount = 150
 
-    var documentOpener: ((URL) -> Void)?
+    @ObservationIgnored var documentOpener: ((URL) -> Void)?
+    /// The window this model plays in, for attaching open and save panels as sheets.
+    @ObservationIgnored weak var window: NSWindow?
 
     /// Safe zone guides are designed for 9:16 video, so they're only offered for that (with a little tolerance for odd pixel sizes).
     var supportsSafeZone: Bool { hasVideo && abs(videoAspectRatio - 9.0 / 16.0) < 0.01 }
@@ -84,8 +88,10 @@ final class VideoPlayerModel: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
 
-        if panel.runModal() == .OK, let url = panel.url {
-            requestOpen(url: url)
+        Task {
+            if let url = await panel.present(in: window) {
+                requestOpen(url: url)
+            }
         }
     }
 
@@ -140,8 +146,16 @@ final class VideoPlayerModel: ObservableObject {
             return
         }
 
+        // Files resolved from bookmarks (restored windows, Open Recent) need access before
+        // anything reads them. Dropped and chosen files already have it, and this returns false.
+        endPendingAccess()
+        if url.startAccessingSecurityScopedResource() {
+            pendingScopedURL = url
+        }
+
         let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
         guard type?.conforms(to: .movie) == true || type?.conforms(to: .audiovisualContent) == true else {
+            endPendingAccess()
             alertMessage = "That file doesn’t appear to be a video."
             return
         }
@@ -195,6 +209,7 @@ final class VideoPlayerModel: ObservableObject {
             } catch is CancellationError {
                 return
             } catch {
+                self.endPendingAccess()
                 self.isLoading = false
                 self.isPresentationReady = self.hasVideo
                 self.alertMessage = "This video couldn’t be opened. \(error.localizedDescription)"
@@ -213,9 +228,11 @@ final class VideoPlayerModel: ObservableObject {
     ) {
         tearDownPlayer()
 
-        if url.startAccessingSecurityScopedResource() {
+        if pendingScopedURL == url {
             securityScopedURL = url
+            pendingScopedURL = nil
         }
+        RecentVideos.shared.note(url)
 
         self.asset = asset
         self.videoURL = url
@@ -238,13 +255,8 @@ final class VideoPlayerModel: ObservableObject {
         }
         frameRate = nominalFrameRate > 0 ? nominalFrameRate : 1.0 / frameDuration
 
-        let generator = AVAssetImageGenerator(asset: asset)
-        generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 360, height: 360)
         let tolerance = CMTime(seconds: max(frameDuration * 2, 0.04), preferredTimescale: 600)
-        generator.requestedTimeToleranceBefore = tolerance
-        generator.requestedTimeToleranceAfter = tolerance
-        previewGenerator = generator
+        previewGenerator = PreviewFrameGenerator(asset: asset, tolerance: tolerance)
         warmPreviewCache(for: asset)
 
         let playerItem = AVPlayerItem(asset: asset)
@@ -300,7 +312,7 @@ final class VideoPlayerModel: ObservableObject {
         presentationSizeCancellable = nil
         player = nil
         asset = nil
-        previewGenerator?.cancelAllCGImageGeneration()
+        previewGenerator?.cancel()
         previewGenerator = nil
         previewWarmupTask?.cancel()
         previewWarmupTask = nil
@@ -312,6 +324,11 @@ final class VideoPlayerModel: ObservableObject {
         mediaStartTime = .zero
         securityScopedURL?.stopAccessingSecurityScopedResource()
         securityScopedURL = nil
+    }
+
+    private func endPendingAccess() {
+        pendingScopedURL?.stopAccessingSecurityScopedResource()
+        pendingScopedURL = nil
     }
 
     func togglePlayback() {
@@ -450,10 +467,8 @@ final class VideoPlayerModel: ObservableObject {
     /// A sharper thumbnail near `seconds`, for when the pointer comes to rest.
     func previewImage(at seconds: Double) async -> CGImage? {
         guard let previewGenerator else { return nil }
-        // Drop any decode still in flight; only the latest position matters.
-        previewGenerator.cancelAllCGImageGeneration()
         let time = CMTime(seconds: mediaStartTime.seconds + min(max(0, seconds), duration), preferredTimescale: 600)
-        return try? await previewGenerator.image(at: time).image
+        return await previewGenerator.image(at: time)
     }
 
     private func previewBucket(for seconds: Double) -> Int {
@@ -501,7 +516,7 @@ final class VideoPlayerModel: ObservableObject {
     }
 
     private func processCurrentFrame(for operation: FrameOperation) {
-        guard frameOperation == nil, let asset, let videoURL else { return }
+        guard frameOperation == nil, asset != nil, let videoURL else { return }
 
         let fallbackCaptureTime = CMTime(
             seconds: mediaStartTime.seconds + currentTime,
@@ -513,20 +528,16 @@ final class VideoPlayerModel: ObservableObject {
         frameOperation = operation
         alertMessage = nil
 
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let generator = AVAssetImageGenerator(asset: asset)
-                generator.appliesPreferredTrackTransform = true
-                generator.requestedTimeToleranceBefore = .zero
-                generator.requestedTimeToleranceAfter = .zero
+        let burnedInZone = includesSafeZoneInCaptures ? activeSafeZone : .off
 
-                let (image, _) = try await generator.image(at: captureTime)
-                let capturedImage = self.includesSafeZoneInCaptures && self.activeSafeZone != .off ? Self.drawing(self.activeSafeZone, onto: image) : image
-                let thumbnail = Self.thumbnail(of: capturedImage)
+        Task { [weak self] in
+            do {
+                let (capturedImage, thumbnailImage) = try await FrameRenderer.frame(ofVideoAt: videoURL, at: captureTime, safeZone: burnedInZone)
+                guard let self else { return }
+                let thumbnail = NSImage(cgImage: thumbnailImage, size: .zero)
                 switch operation {
                 case .save:
-                    if let savedURL = try self.save(image: capturedImage, videoURL: videoURL, seconds: captureSeconds) {
+                    if let savedURL = try await self.save(image: capturedImage, videoURL: videoURL, seconds: captureSeconds) {
                         self.celebrate(operation, thumbnail: thumbnail)
                         self.showToast(
                             "Saved \(savedURL.lastPathComponent)",
@@ -542,6 +553,7 @@ final class VideoPlayerModel: ObservableObject {
                 }
                 self.frameOperation = nil
             } catch {
+                guard let self else { return }
                 self.frameOperation = nil
                 let verb = operation == .copy ? "copied" : "saved"
                 self.alertMessage = "The frame couldn’t be \(verb). \(error.localizedDescription)"
@@ -562,7 +574,7 @@ final class VideoPlayerModel: ObservableObject {
     }
 
     /// Returns the written file, or nil when the user cancels the save panel.
-    private func save(image: CGImage, videoURL: URL, seconds: Double) throws -> URL? {
+    private func save(image: CGImage, videoURL: URL, seconds: Double) async throws -> URL? {
         let defaults = UserDefaults.standard
         let format = CaptureFormat(rawValue: defaults.string(forKey: PreferenceKey.captureFormat) ?? "png") ?? .png
         let destination = SaveDestination(rawValue: defaults.string(forKey: PreferenceKey.saveDestination) ?? "askEveryTime") ?? .askEveryTime
@@ -583,7 +595,7 @@ final class VideoPlayerModel: ObservableObject {
             panel.nameFieldStringValue = filename
             panel.allowedContentTypes = [format.contentType]
             panel.canCreateDirectories = true
-            guard panel.runModal() == .OK, let selectedURL = panel.url else {
+            guard let selectedURL = await panel.present(in: window) else {
                 return nil
             }
             outputURL = selectedURL
@@ -592,8 +604,7 @@ final class VideoPlayerModel: ObservableObject {
         defer { accessedFolder?.stopAccessingSecurityScopedResource() }
 
         let quality = defaults.object(forKey: PreferenceKey.jpegQuality) as? Double ?? 0.9
-        let data = try encodedData(for: image, format: format, quality: quality)
-        try data.write(to: outputURL, options: .atomic)
+        try await FrameRenderer.write(image, format: format, quality: quality, to: outputURL)
         return outputURL
     }
 
@@ -607,99 +618,6 @@ final class VideoPlayerModel: ObservableObject {
             self?.completedOperation = nil
             self?.captureFlight = nil
         }
-    }
-
-    /// Burns the safe zone guide into a captured frame, matching what's shown on screen.
-    private static func drawing(_ zone: SafeZone, onto image: CGImage) -> CGImage {
-        guard zone != .off else { return image }
-        let width = CGFloat(image.width), height = CGFloat(image.height)
-        guard let context = CGContext(
-            data: nil,
-            width: image.width,
-            height: image.height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return image }
-
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        // Core Graphics puts the origin bottom-left; the zone is defined top-left.
-        context.translateBy(x: 0, y: height)
-        context.scaleBy(x: 1, y: -1)
-
-        let safeArea = CGMutablePath()
-        safeArea.addLines(between: zone.polygon.map { CGPoint(x: $0.x * width, y: $0.y * height) })
-        safeArea.closeSubpath()
-
-        let dimmed = CGMutablePath()
-        dimmed.addRect(CGRect(x: 0, y: 0, width: width, height: height))
-        dimmed.addPath(safeArea)
-        context.addPath(dimmed)
-        context.setFillColor(CGColor(gray: 0, alpha: 0.42))
-        context.fillPath(using: .evenOdd)
-
-        // Scale the outline so it reads the same as on screen at any resolution.
-        let lineWidth = max(1.5, width * 0.004)
-        context.addPath(safeArea)
-        context.setStrokeColor(CGColor(gray: 1, alpha: 0.9))
-        context.setLineWidth(lineWidth)
-        context.setLineJoin(.round)
-        context.setLineDash(phase: 0, lengths: [lineWidth * 4, lineWidth * 2.7])
-        context.strokePath()
-
-        return context.makeImage() ?? image
-    }
-
-    private static func thumbnail(of image: CGImage, maxDimension: CGFloat = 480) -> NSImage {
-        let scale = min(1, maxDimension / CGFloat(max(image.width, image.height)))
-        let size = CGSize(width: max(1, CGFloat(image.width) * scale), height: max(1, CGFloat(image.height) * scale))
-        guard let context = CGContext(
-            data: nil,
-            width: Int(size.width),
-            height: Int(size.height),
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            return NSImage(cgImage: image, size: size)
-        }
-        context.interpolationQuality = .high
-        context.draw(image, in: CGRect(origin: .zero, size: size))
-        return NSImage(cgImage: context.makeImage() ?? image, size: size)
-    }
-
-    private func encodedData(for image: CGImage, format: CaptureFormat, quality: Double) throws -> Data {
-        if format == .heic {
-            let data = NSMutableData()
-            guard let destination = CGImageDestinationCreateWithData(
-                data,
-                format.contentType.identifier as CFString,
-                1,
-                nil
-            ) else {
-                throw PlayerError.couldNotEncode
-            }
-            CGImageDestinationAddImage(destination, image, nil)
-            guard CGImageDestinationFinalize(destination) else {
-                throw PlayerError.couldNotEncode
-            }
-            return data as Data
-        }
-
-        guard let bitmapType = format.bitmapType else {
-            throw PlayerError.couldNotEncode
-        }
-        let representation = NSBitmapImageRep(cgImage: image)
-        var properties: [NSBitmapImageRep.PropertyKey: Any] = [:]
-        if format == .jpeg {
-            properties[.compressionFactor] = min(max(quality, 0.1), 1)
-        }
-        guard let data = representation.representation(using: bitmapType, properties: properties) else {
-            throw PlayerError.couldNotEncode
-        }
-        return data
     }
 
     private func uniqueURL(in folder: URL, filename: String) -> URL {
@@ -766,14 +684,12 @@ struct CaptureFlight: Identifiable, Equatable {
 private enum PlayerError: LocalizedError {
     case notPlayable
     case noVideoTrack
-    case couldNotEncode
     case couldNotCopy
 
     var errorDescription: String? {
         switch self {
         case .notPlayable: "The file is not playable."
         case .noVideoTrack: "The file has no video track."
-        case .couldNotEncode: "The image could not be encoded in the selected format."
         case .couldNotCopy: "The clipboard did not accept the image."
         }
     }

@@ -3,8 +3,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @ObservedObject var model: VideoPlayerModel
+    var model: VideoPlayerModel
     @State private var isDropTargeted = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -30,7 +31,7 @@ struct ContentView: View {
             if let toast = model.toast {
                 toastPlacement(toast)
                     .id(toast.id)
-                    .transition(.move(edge: model.hasVideo ? .top : .bottom).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: model.hasVideo ? .top : .bottom).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.84), value: model.toast)
@@ -98,6 +99,8 @@ private struct WindowBackground: View {
 }
 
 private struct LoadingOverlay: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         ZStack {
             Color(nsColor: .windowBackgroundColor)
@@ -112,12 +115,16 @@ private struct LoadingOverlay: View {
             .ignoresSafeArea()
 
             VStack(spacing: 16) {
-                PhaseAnimator([0.0, 1.0]) { phase in
-                    PluckMark(plucked: phase, size: 84)
-                } animation: { phase in
-                    phase == 1
-                        ? .spring(response: 0.7, dampingFraction: 0.72).delay(0.15)
-                        : .easeInOut(duration: 0.5).delay(0.5)
+                if reduceMotion {
+                    PluckMark(plucked: 0.82, size: 84)
+                } else {
+                    PhaseAnimator([0.0, 1.0]) { phase in
+                        PluckMark(plucked: phase, size: 84)
+                    } animation: { phase in
+                        phase == 1
+                            ? .spring(response: 0.7, dampingFraction: 0.72).delay(0.15)
+                            : .easeInOut(duration: 0.5).delay(0.5)
+                    }
                 }
 
                 Text("Preparing video…")
@@ -183,8 +190,7 @@ private struct ToastView: View {
         .padding(.vertical, 7)
         .frame(minHeight: 44)
         .fixedSize(horizontal: false, vertical: true)
-        .glassEffect(.regular, in: .capsule)
-        .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+        .glassEffect(.regular.interactive(toast.revealURL != nil), in: .capsule)
         .modifier(HugContentWidth())
         .padding(.horizontal, 20)
     }
