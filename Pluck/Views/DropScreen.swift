@@ -31,7 +31,7 @@ struct DropScreen: View {
                 Button("Choose Video…") {
                     model.presentOpenPanel()
                 }
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.top, 20)
             }
@@ -41,10 +41,11 @@ struct DropScreen: View {
             .contentShape(Rectangle())
 
             if isTargeted {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, dash: [9, 6]))
+                // Concentric with the window's corners, inset by the padding.
+                ConcentricRectangle(corners: .concentric(minimum: 12), isUniform: true)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, dash: [9, 6]))
                     .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        ConcentricRectangle(corners: .concentric(minimum: 12), isUniform: true)
                             .fill(Color.accentColor.opacity(0.06))
                     )
                     .padding(12)
@@ -111,7 +112,7 @@ struct DropScreen: View {
         .foregroundStyle(.primary.opacity(0.85))
         .padding(.horizontal, 16)
         .frame(height: 36)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .glassEffect(.regular, in: .capsule)
     }
 
     private var destinationTitle: String {

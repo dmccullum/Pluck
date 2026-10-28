@@ -179,7 +179,10 @@ private struct ToastView: View {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                     onDismiss()
                 }
-                .buttonStyle(.glass)
+                // A plain tinted button: no glass inside the glass capsule.
+                .buttonStyle(.borderless)
+                .foregroundStyle(.tint)
+                .fontWeight(.semibold)
                 .controlSize(.small)
                 .fixedSize()
             }
@@ -189,7 +192,7 @@ private struct ToastView: View {
         .padding(.vertical, 7)
         .frame(minHeight: 44)
         .fixedSize(horizontal: false, vertical: true)
-        .glassEffect(.regular.interactive(toast.revealURL != nil), in: .capsule)
+        .glassEffect(.regular, in: .capsule)
         .modifier(HugContentWidth())
         .padding(.horizontal, 20)
     }

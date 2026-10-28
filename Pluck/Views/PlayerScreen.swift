@@ -641,7 +641,7 @@ private struct PlaybackHUD: View {
         .padding(.top, 8)
         .padding(.bottom, 13)
         .glassEffect(
-            .regular.tint(.black.opacity(0.22)).interactive(),
+            .regular.tint(.black.opacity(0.22)),
             in: .rect(cornerRadius: 22)
         )
         .foregroundStyle(.white)
