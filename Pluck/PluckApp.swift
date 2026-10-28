@@ -12,6 +12,11 @@ struct PluckApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             VideoDocumentCommands()
+            FamilyHelpCommands(
+                help: URL(string: "https://github.com/dmccullum/Pluck#readme")!,
+                keyboardShortcuts: .url(URL(string: "https://github.com/dmccullum/Pluck#keyboard-shortcuts")!),
+                reportIssue: URL(string: "https://github.com/dmccullum/Pluck/issues/new")
+            )
         }
 
         Settings {
