@@ -119,7 +119,6 @@ private struct VideoDocumentWindow: View {
             goToStart: model.seekToStart,
             goToEnd: model.seekToEnd,
             hasVideo: model.hasVideo,
-            isPlaying: model.isPlaying,
             isCapturing: model.isCapturing
         )
     }
@@ -158,7 +157,6 @@ private struct VideoDocumentActions {
     let goToStart: () -> Void
     let goToEnd: () -> Void
     let hasVideo: Bool
-    let isPlaying: Bool
     let isCapturing: Bool
 }
 
@@ -231,7 +229,7 @@ private struct VideoDocumentCommands: Commands {
         }
 
         CommandMenu("Playback") {
-            Button(actions?.isPlaying == true ? "Pause" : "Play") {
+            Button("Play/Pause") {
                 actions?.togglePlayback()
             }
             .keyboardShortcut(.space, modifiers: [])
