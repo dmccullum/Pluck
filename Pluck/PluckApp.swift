@@ -189,10 +189,13 @@ private struct VideoDocumentCommands: Commands {
         CommandGroup(after: .newItem) {
             Divider()
             Button("Open Video…") {
-                actions?.openVideo()
+                if let actions {
+                    actions.openVideo()
+                } else {
+                    openVideoInNewWindow()
+                }
             }
             .keyboardShortcut("o", modifiers: .command)
-            .disabled(actions == nil)
 
             Menu("Open Recent") {
                 ForEach(recents.videos, id: \.self) { video in
@@ -303,6 +306,15 @@ private struct VideoDocumentCommands: Commands {
                 .keyboardShortcut("0", modifiers: .command)
 
                 Divider()
+            }
+        }
+    }
+
+    /// With no video window to attach a sheet to, runs the panel app-modally.
+    private func openVideoInNewWindow() {
+        Task {
+            if let url = await VideoPlayerModel.makeOpenPanel().present(in: nil) {
+                openWindow(value: VideoReference(url: url))
             }
         }
     }

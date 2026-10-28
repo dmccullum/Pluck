@@ -80,14 +80,18 @@ final class VideoPlayerModel {
         includesSafeZoneInCaptures = defaults.bool(forKey: PreferenceKey.safeZoneInCaptures)
     }
 
-    func presentOpenPanel() {
+    static func makeOpenPanel() -> NSOpenPanel {
         let panel = NSOpenPanel()
         panel.title = "Open a Video"
         panel.prompt = "Open"
         panel.allowedContentTypes = [.movie, .audiovisualContent]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
+        return panel
+    }
 
+    func presentOpenPanel() {
+        let panel = Self.makeOpenPanel()
         Task {
             if let url = await panel.present(in: window) {
                 requestOpen(url: url)
