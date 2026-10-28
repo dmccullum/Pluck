@@ -26,6 +26,9 @@ final class VideoPlayerModel {
     private(set) var frameRate: Double = 30
     private(set) var safeZone: SafeZone
     private(set) var includesSafeZoneInCaptures: Bool
+    /// Bumped by every frame step and jump, so the player can show its controls
+    /// for keyboard navigation the way it does for pointer movement.
+    private(set) var navigationCount = 0
 
     @ObservationIgnored private var asset: AVAsset?
     @ObservationIgnored private var frameDuration = 1.0 / 30.0
@@ -415,24 +418,28 @@ final class VideoPlayerModel {
 
     func stepFrame(by count: Int) {
         guard player != nil else { return }
+        navigationCount += 1
         stopPlayback()
         seek(to: currentTime + (Double(count) * frameDuration))
     }
 
     func seekBy(_ seconds: Double) {
         guard player != nil else { return }
+        navigationCount += 1
         stopPlayback()
         seek(to: currentTime + seconds)
     }
 
     func seekToStart() {
         guard player != nil else { return }
+        navigationCount += 1
         stopPlayback()
         seek(to: 0)
     }
 
     func seekToEnd() {
         guard player != nil else { return }
+        navigationCount += 1
         stopPlayback()
         seek(to: max(0, duration - frameDuration))
     }

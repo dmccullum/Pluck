@@ -56,6 +56,9 @@ struct PlayerScreen: View {
         .onChange(of: model.isPlaying) { _, _ in
             showControls(andScheduleHide: true)
         }
+        .onChange(of: model.navigationCount) { _, _ in
+            showControls(andScheduleHide: true)
+        }
         .onChange(of: model.isScrubbing) { _, isScrubbing in
             if isScrubbing {
                 showControls(andScheduleHide: false)
@@ -193,8 +196,14 @@ struct PlayerScreen: View {
         }
     }
 
+    /// Hidden controls are disabled, so with VoiceOver running they stay up for it to reach.
+    private var keepsControlsVisible: Bool {
+        isSafeZonePopoverPresented || model.isScrubbing || model.frameOperation != nil
+            || NSWorkspace.shared.isVoiceOverEnabled
+    }
+
     private func scheduleControlsHide() {
-        guard !isSafeZonePopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
+        guard !keepsControlsVisible else { return }
         hideControlsTask?.cancel()
         hideControlsTask = Task {
             try? await Task.sleep(for: .seconds(2.5))
@@ -214,7 +223,7 @@ struct PlayerScreen: View {
     }
 
     private func hideControlsNow() {
-        guard !isSafeZonePopoverPresented, !model.isScrubbing, model.frameOperation == nil else { return }
+        guard !keepsControlsVisible else { return }
         hideControlsTask?.cancel()
         model.setControlsVisible(false)
     }
@@ -279,10 +288,13 @@ private final class PointerTrackingNSView: NSView {
             }
             return event
         }
-        // SwiftUI shortcuts cannot express holding K while tapping J or L.
+        // SwiftUI shortcuts cannot express holding K while tapping J or L. Comma and period
+        // step here too, because the hidden transport buttons are disabled and can't take shortcuts.
+        // Keys are matched by character, so they follow the keyboard layout.
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self, weak window] event in
             guard let self, let window, event.window === window else { return event }
-            if event.keyCode == 40, event.type == .keyUp {
+            let key = event.charactersIgnoringModifiers?.lowercased()
+            if key == "k", event.type == .keyUp {
                 self.isKHeld = false
                 return event
             }
@@ -290,18 +302,21 @@ private final class PointerTrackingNSView: NSView {
                   event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
                   !(window.firstResponder is NSTextView) else { return event }
 
-            if event.keyCode == 40 {
+            switch key {
+            case "k":
                 self.isKHeld = true
                 return event
-            }
-            let frameStep = event.keyCode == 38 ? -1 : (event.keyCode == 37 ? 1 : 0)
-            guard frameStep != 0 else { return event }
-            if event.isARepeat { return nil }
-            if self.isKHeld {
-                self.onFrameStep?(frameStep)
+            case ",", ".":
+                self.onFrameStep?(key == "," ? -1 : 1)
                 return nil
+            case "j", "l":
+                if event.isARepeat { return nil }
+                guard self.isKHeld else { return event }
+                self.onFrameStep?(key == "j" ? -1 : 1)
+                return nil
+            default:
+                return event
             }
-            return event
         }
         windowResignObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
@@ -455,6 +470,8 @@ private struct SafeZoneButton: View {
         .opacity(controlsVisible ? 1 : 0)
         .scaleEffect(controlsVisible || reduceMotion ? 1 : 0.92)
         .allowsHitTesting(controlsVisible)
+        // Out of the keyboard focus loop while invisible.
+        .disabled(!controlsVisible)
     }
 
     private var button: some View {
@@ -575,7 +592,6 @@ private struct PlaybackHUD: View {
                 HUDButton(title: "Previous Frame", systemImage: "backward.frame.fill") {
                     model.stepFrame(by: -1)
                 }
-                .keyboardShortcut(",", modifiers: [])
 
                 Button {
                     model.togglePlayback()
@@ -585,13 +601,11 @@ private struct PlaybackHUD: View {
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(HUDIconButtonStyle(diameter: 42))
-                .keyboardShortcut(.space, modifiers: [])
                 .help(model.isPlaying ? "Pause (Space)" : "Play (Space)")
 
                 HUDButton(title: "Next Frame", systemImage: "forward.frame.fill") {
                     model.stepFrame(by: 1)
                 }
-                .keyboardShortcut(".", modifiers: [])
             }
             .overlay(alignment: .leading) {
                 if model.shuttleRate < 0 {
@@ -634,6 +648,7 @@ private struct PlaybackHUD: View {
         .opacity(controlsVisible ? 1 : 0)
         .offset(y: controlsVisible || reduceMotion ? 0 : 8)
         .allowsHitTesting(controlsVisible)
+        .disabled(!controlsVisible)
     }
 
     private var trailingPrefix: String {
@@ -698,6 +713,7 @@ private struct FrameActionButtons: View {
         .opacity(controlsVisible ? 1 : 0)
         .scaleEffect(controlsVisible || reduceMotion ? 1 : 0.92)
         .allowsHitTesting(controlsVisible)
+        .disabled(!controlsVisible)
     }
 }
 
