@@ -685,9 +685,7 @@ private struct FrameActionButton: View {
     @ViewBuilder
     var body: some View {
         if operation == .copy {
-            button
-                .buttonStyle(.glass)
-                .keyboardShortcut("c", modifiers: .command)
+            button.buttonStyle(.glass)
         } else {
             button.buttonStyle(.glassProminent)
         }

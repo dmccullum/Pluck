@@ -218,7 +218,8 @@ private struct VideoDocumentCommands: Commands {
             .disabled(actions?.hasVideo != true || actions?.isCapturing == true)
         }
 
-        CommandGroup(after: .pasteboard) {
+        // The windows have no text to edit, so Copy copies the frame and the other edit items go.
+        CommandGroup(replacing: .pasteboard) {
             Button("Copy Frame") {
                 actions?.copyFrame()
             }
