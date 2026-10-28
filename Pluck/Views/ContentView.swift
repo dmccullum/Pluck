@@ -47,13 +47,13 @@ struct ContentView: View {
         } isTargeted: { targeted in
             isDropTargeted = targeted
         }
-        .alert("Pluck", isPresented: Binding(
-            get: { model.alertMessage != nil },
-            set: { if !$0 { model.alertMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { model.alertMessage = nil }
-        } message: {
-            Text(model.alertMessage ?? "")
+        .alert(model.alert?.title ?? "", isPresented: Binding(
+            get: { model.alert != nil },
+            set: { if !$0 { model.alert = nil } }
+        ), presenting: model.alert) { _ in
+            Button("OK", role: .cancel) { model.alert = nil }
+        } message: { alert in
+            Text(alert.message)
         }
     }
 

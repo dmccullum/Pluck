@@ -19,7 +19,7 @@ final class VideoPlayerModel {
     private(set) var isPresentationReady = false
     private(set) var presentationID = UUID()
     private(set) var frameOperation: FrameOperation?
-    var alertMessage: String?
+    var alert: PlayerAlert?
     private(set) var toast: Toast?
     private(set) var captureFlight: CaptureFlight?
     private(set) var completedOperation: FrameOperation?
@@ -161,7 +161,7 @@ final class VideoPlayerModel {
 
     func open(url: URL) {
         guard url.isFileURL else {
-            alertMessage = "Pluck can only open local video files."
+            alert = PlayerAlert(title: "Couldn’t Open Video", message: "Pluck can only open local video files.")
             return
         }
 
@@ -175,7 +175,7 @@ final class VideoPlayerModel {
         let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
         guard type?.conforms(to: .movie) == true || type?.conforms(to: .audiovisualContent) == true else {
             endPendingAccess()
-            alertMessage = "That file doesn’t appear to be a video."
+            alert = PlayerAlert(title: "Couldn’t Open Video", message: "That file doesn’t appear to be a video.")
             return
         }
 
@@ -184,7 +184,7 @@ final class VideoPlayerModel {
         isLoading = true
         isPresentationReady = false
         setControlsVisible(true)
-        alertMessage = nil
+        alert = nil
 
         loadTask = Task { [weak self] in
             guard let self else { return }
@@ -231,7 +231,7 @@ final class VideoPlayerModel {
                 self.endPendingAccess()
                 self.isLoading = false
                 self.isPresentationReady = self.hasVideo
-                self.alertMessage = "This video couldn’t be opened. \(error.localizedDescription)"
+                self.alert = PlayerAlert(title: "Couldn’t Open Video", message: error.localizedDescription)
             }
         }
     }
@@ -549,7 +549,7 @@ final class VideoPlayerModel {
         let relativeCaptureSeconds = captureTime.seconds - mediaStartTime.seconds
         let captureSeconds = relativeCaptureSeconds.isFinite ? max(0, relativeCaptureSeconds) : currentTime
         frameOperation = operation
-        alertMessage = nil
+        alert = nil
 
         let burnedInZone = includesSafeZoneInCaptures ? activeSafeZone : .off
 
@@ -578,8 +578,10 @@ final class VideoPlayerModel {
             } catch {
                 guard let self else { return }
                 self.frameOperation = nil
-                let verb = operation == .copy ? "copied" : "saved"
-                self.alertMessage = "The frame couldn’t be \(verb). \(error.localizedDescription)"
+                self.alert = PlayerAlert(
+                    title: operation == .copy ? "Couldn’t Copy Frame" : "Couldn’t Save Frame",
+                    message: error.localizedDescription
+                )
             }
         }
     }
@@ -699,6 +701,12 @@ final class VideoPlayerModel {
 enum FrameOperation {
     case save
     case copy
+}
+
+/// An error alert, titled with what failed.
+struct PlayerAlert {
+    let title: String
+    let message: String
 }
 
 struct Toast: Identifiable, Equatable {

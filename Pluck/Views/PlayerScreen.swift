@@ -491,7 +491,7 @@ private struct SafeZoneButton: View {
         }
         .buttonBorderShape(.circle)
         .controlSize(.large)
-        .help((model.safeZone == .off ? "Safe zone guides" : "Safe zone: \(model.safeZone.title)") + " · Command-click to turn \(model.safeZone == .off ? "on" : "off")")
+        .help((model.safeZone == .off ? "Safe Zone" : "Safe Zone: \(model.safeZone.menuTitle)") + " · ⌘-click to turn \(model.safeZone == .off ? "on" : "off")")
         .accessibilityValue(model.safeZone == .off ? "Off" : model.safeZone.title)
     }
 }
@@ -738,7 +738,6 @@ private struct FrameActionButton: View {
     }
 
     private var symbolName: String {
-        if isWorking { return "hourglass" }
         if isDone { return "checkmark" }
         return operation == .copy ? "doc.on.doc" : "camera.shutter.button.fill"
     }
@@ -760,18 +759,25 @@ private struct FrameActionButton: View {
                 model.captureCurrentFrame()
             }
         } label: {
-            Image(systemName: symbolName)
-                .font(.system(size: 17, weight: .semibold))
-                .contentTransition(.symbolEffect(.replace))
-                .offset(x: operation == .copy && !isDone ? 2 : 0, y: operation == .copy && !isDone ? -1 : 0)
-                .frame(width: 28, height: 28)
-                .accessibilityLabel(isWorking ? "\(operation == .copy ? "Copying" : "Saving") Frame" : title)
+            Group {
+                if isWorking {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: symbolName)
+                        .font(.system(size: 17, weight: .semibold))
+                        .contentTransition(.symbolEffect(.replace))
+                        .offset(x: operation == .copy && !isDone ? 2 : 0, y: operation == .copy && !isDone ? -1 : 0)
+                }
+            }
+            .frame(width: 28, height: 28)
+            .accessibilityLabel(isWorking ? "\(operation == .copy ? "Copying" : "Saving") Frame" : title)
         }
         .buttonBorderShape(.circle)
         .controlSize(.large)
         .disabled(model.isCapturing)
         .anchorPreference(key: ActionButtonAnchorKey.self, value: .center) { [operation: $0] }
-        .help("\(title) (Command-\(operation == .copy ? "C" : "S"))")
+        .help("\(title) (\(operation == .copy ? "⌘C" : "⌘S"))")
     }
 }
 
@@ -787,7 +793,7 @@ private struct HUDButton: View {
                 .font(.system(size: 17, weight: .semibold))
         }
         .buttonStyle(HUDIconButtonStyle(diameter: 34))
-        .help(title + (title == "Previous Frame" ? " (←, comma, or K+J)" : " (→, period, or K+L)"))
+        .help("\(title) (\(title == "Previous Frame" ? "←" : "→"))")
     }
 }
 

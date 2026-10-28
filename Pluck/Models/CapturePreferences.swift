@@ -53,8 +53,8 @@ enum SaveDestination: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .askEveryTime: "Ask every time"
-        case .chosenFolder: "Chosen folder"
+        case .askEveryTime: "Ask Every Time"
+        case .chosenFolder: "Chosen Folder"
         }
     }
 

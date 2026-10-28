@@ -28,9 +28,10 @@ struct DropScreen: View {
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)
 
-                Button("Choose Video…") {
+                Button("Open Video…") {
                     model.presentOpenPanel()
                 }
+                .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.top, 20)
