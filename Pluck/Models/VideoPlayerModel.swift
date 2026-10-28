@@ -1,3 +1,4 @@
+import Accessibility
 import AppKit
 import AVFoundation
 import Combine
@@ -663,13 +664,28 @@ final class VideoPlayerModel {
         thumbnail: NSImage? = nil,
         revealURL: URL? = nil
     ) {
-        toastTask?.cancel()
         let newToast = Toast(message: message, systemImage: systemImage, thumbnail: thumbnail, revealURL: revealURL)
         toast = newToast
+        AccessibilityNotification.Announcement(message).post()
+        scheduleToastDismissal(of: newToast)
+    }
+
+    /// Holds the toast while the pointer is over it, and restarts its timer when the pointer leaves.
+    func setToastHovered(_ isHovered: Bool) {
+        guard let toast else { return }
+        if isHovered {
+            toastTask?.cancel()
+        } else {
+            scheduleToastDismissal(of: toast)
+        }
+    }
+
+    private func scheduleToastDismissal(of toast: Toast) {
+        toastTask?.cancel()
         toastTask = Task { [weak self] in
             // Leave actionable toasts up long enough to reach the button.
-            try? await Task.sleep(for: .seconds(revealURL == nil ? 2.4 : 4.5))
-            guard !Task.isCancelled, self?.toast?.id == newToast.id else { return }
+            try? await Task.sleep(for: .seconds(toast.revealURL == nil ? 4 : 4.5))
+            guard !Task.isCancelled, self?.toast?.id == toast.id else { return }
             self?.toast = nil
         }
     }

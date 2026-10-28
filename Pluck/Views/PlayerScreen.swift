@@ -9,6 +9,7 @@ struct PlayerScreen: View {
     @State private var hideControlsTask: Task<Void, Never>?
     @State private var isSafeZonePopoverPresented = false
     @State private var isPointerInside = false
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         GeometryReader { proxy in
@@ -103,7 +104,7 @@ struct PlayerScreen: View {
                     Text(videoDetails)
                         .font(.system(size: 10.5, weight: .medium))
                         .monospacedDigit()
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.white.opacity(contrast == .increased ? 0.85 : 0.55))
                 }
             }
                 .frame(maxWidth: .infinity)
@@ -524,7 +525,7 @@ private struct SafeZonePopover: View {
                     set: { model.setIncludesSafeZoneInCaptures($0) }
                 )
             )
-            .toggleStyle(.switch)
+            .toggleStyle(.checkbox)
             .disabled(model.safeZone == .off)
             .padding(.top, 4)
         }
@@ -577,6 +578,7 @@ private struct PlaybackHUD: View {
     @Environment(\.playerControlsVisible) private var controlsVisible
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(PreferenceKey.timeDisplay) private var timeDisplayRaw = TimeDisplay.timecode.rawValue
+    @Environment(\.colorSchemeContrast) private var contrast
 
     private var timeDisplay: TimeDisplay {
         TimeDisplay(rawValue: timeDisplayRaw) ?? .timecode
@@ -596,7 +598,8 @@ private struct PlaybackHUD: View {
                 Button {
                     model.togglePlayback()
                 } label: {
-                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                    Label(model.isPlaying ? "Pause" : "Play", systemImage: model.isPlaying ? "pause.fill" : "play.fill")
+                        .labelStyle(.iconOnly)
                         .font(.system(size: 22, weight: .semibold))
                         .contentTransition(.symbolEffect(.replace))
                 }
@@ -672,7 +675,7 @@ private struct PlaybackHUD: View {
             ZStack(alignment: isPrimary ? .leading : .trailing) {
                 Text(widest).hidden()
                 Text(text)
-                    .foregroundStyle(isPrimary ? .white : .white.opacity(0.6))
+                    .foregroundStyle(isPrimary ? .white : .white.opacity(contrast == .increased ? 0.85 : 0.6))
             }
             .monospacedDigit()
             .fixedSize()
@@ -779,7 +782,8 @@ private struct HUDButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage)
+            Label(title, systemImage: systemImage)
+                .labelStyle(.iconOnly)
                 .font(.system(size: 17, weight: .semibold))
         }
         .buttonStyle(HUDIconButtonStyle(diameter: 34))

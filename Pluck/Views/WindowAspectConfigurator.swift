@@ -174,16 +174,26 @@ struct WindowAspectConfigurator: NSViewRepresentable {
             height: targetFrameSize.height
         ).constrained(to: visibleFrame)
 
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.28
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            context.allowsImplicitAnimation = true
-            window.animator().setFrame(targetFrame, display: true)
-        } completionHandler: {
+        let finishTransition: @Sendable () -> Void = {
             DispatchQueue.main.async {
                 guard coordinator.transitionGeneration == transitionGeneration else { return }
                 self.applyMinimumContentSize(minimumContentSize, to: window)
                 self.onPresentationReady(self.presentationID)
+            }
+        }
+
+        // With Reduce Motion, the window jumps to its new size instead of growing into it.
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            window.setFrame(targetFrame, display: true, animate: false)
+            finishTransition()
+        } else {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.28
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                context.allowsImplicitAnimation = true
+                window.animator().setFrame(targetFrame, display: true)
+            } completionHandler: {
+                finishTransition()
             }
         }
     }

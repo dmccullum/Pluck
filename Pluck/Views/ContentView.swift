@@ -76,14 +76,14 @@ struct ContentView: View {
     private func toastPlacement(_ toast: Toast) -> some View {
         if model.hasVideo {
             VStack {
-                ToastView(toast: toast, onDismiss: model.dismissToast)
+                ToastView(toast: toast, onDismiss: model.dismissToast, onHover: model.setToastHovered)
                     .padding(.top, 44)
                 Spacer()
             }
         } else {
             VStack {
                 Spacer()
-                ToastView(toast: toast, onDismiss: model.dismissToast)
+                ToastView(toast: toast, onDismiss: model.dismissToast, onHover: model.setToastHovered)
                     .padding(.bottom, 72)
             }
         }
@@ -139,6 +139,7 @@ private struct LoadingOverlay: View {
 private struct ToastView: View {
     let toast: Toast
     let onDismiss: () -> Void
+    let onHover: (Bool) -> Void
 
     var body: some View {
         HStack(spacing: 11) {
@@ -193,6 +194,7 @@ private struct ToastView: View {
         .frame(minHeight: 44)
         .fixedSize(horizontal: false, vertical: true)
         .glassEffect(.regular, in: .capsule)
+        .onHover(perform: onHover)
         .modifier(HugContentWidth())
         .padding(.horizontal, 20)
     }
