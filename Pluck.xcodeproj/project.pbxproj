@@ -23,6 +23,7 @@
 		A1000000000000000000000D /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Brand.swift */; };
 		A1000000000000000000000E /* Scrubber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Scrubber.swift */; };
 		A1000000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Assets.xcassets */; };
+		A10000000000000000000012 /* DMKit in Frameworks */ = {isa = PBXBuildFile; productRef = AC0000000000000000000001 /* DMKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000012 /* DMKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +141,9 @@
 			dependencies = (
 			);
 			name = Pluck;
+			packageProductDependencies = (
+				AC0000000000000000000001 /* DMKit */,
+			);
 			productName = Pluck;
 			productReference = A2000000000000000000000C /* Pluck.app */;
 			productType = "com.apple.product-type.application";
@@ -166,6 +171,9 @@
 				Base,
 			);
 			mainGroup = A40000000000000000000001;
+			packageReferences = (
+				AB0000000000000000000001 /* XCLocalSwiftPackageReference "../DMKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A40000000000000000000006 /* Products */;
 			projectDirPath = "";
@@ -368,6 +376,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AB0000000000000000000001 /* XCLocalSwiftPackageReference "../DMKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../DMKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AC0000000000000000000001 /* DMKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DMKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A80000000000000000000001 /* Project object */;
 }
