@@ -43,8 +43,7 @@ struct ContentView: View {
             idealHeight: model.hasVideo ? 700 : 400
         )
         .dropDestination(for: URL.self) { urls, _ in
-            guard let url = urls.first else { return false }
-            return model.handleDrop(url: url)
+            model.handleDrop(urls: urls)
         } isTargeted: { targeted in
             isDropTargeted = targeted
         }

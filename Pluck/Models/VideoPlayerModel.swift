@@ -103,14 +103,20 @@ final class VideoPlayerModel {
         }
     }
 
+    /// Opens the first dropped video here and the rest in new windows.
     @discardableResult
-    func handleDrop(url: URL) -> Bool {
-        let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
-        guard contentType?.conforms(to: .movie) == true
-                || contentType?.conforms(to: .audiovisualContent) == true else {
-            return false
+    func handleDrop(urls: [URL]) -> Bool {
+        let videos = urls.filter { url in
+            let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
+            return contentType?.conforms(to: .movie) == true
+                || contentType?.conforms(to: .audiovisualContent) == true
         }
-        open(url: url)
+        guard let first = videos.first else { return false }
+        open(url: first)
+        // This window is loading now, so the document opener sends the rest to new windows.
+        for url in videos.dropFirst() {
+            requestOpen(url: url)
+        }
         return true
     }
 

@@ -93,8 +93,9 @@ private struct VideoDocumentWindow: View {
     }
 
     /// Opens `url` here if this window is empty, otherwise in a new window.
+    /// A window still loading a video counts as occupied, so a batch of files each gets a window.
     private func open(_ url: URL, in model: VideoPlayerModel) {
-        if model.hasVideo {
+        if model.hasVideo || model.isLoading {
             openWindow(value: VideoReference(url: url))
         } else {
             model.open(url: url)
