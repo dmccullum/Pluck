@@ -1,11 +1,11 @@
 import AppKit
+import DMKit
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    var model: VideoPlayerModel
+    @Bindable var model: VideoPlayerModel
     @State private var isDropTargeted = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -27,14 +27,9 @@ struct ContentView: View {
             if model.isLoading {
                 LoadingOverlay()
             }
-
-            if let toast = model.toast {
-                toastPlacement(toast)
-                    .id(toast.id)
-                    .transition(reduceMotion ? .opacity : .move(edge: model.hasVideo ? .top : .bottom).combined(with: .opacity))
-            }
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.84), value: model.toast)
+        // Statuses follow a capture or a safe zone change, so there's always a video under them.
+        .statusCapsule($model.status, alignment: .top)
         .animation(.easeOut(duration: 0.22), value: model.isPresentationReady)
         .frame(
             minWidth: minimumContentSize.width,
@@ -70,23 +65,6 @@ struct ContentView: View {
             width: minimumWidth,
             height: minimumWidth / model.videoAspectRatio
         )
-    }
-
-    @ViewBuilder
-    private func toastPlacement(_ toast: Toast) -> some View {
-        if model.hasVideo {
-            VStack {
-                ToastView(toast: toast, onDismiss: model.dismissToast, onHover: model.setToastHovered)
-                    .padding(.top, 44)
-                Spacer()
-            }
-        } else {
-            VStack {
-                Spacer()
-                ToastView(toast: toast, onDismiss: model.dismissToast, onHover: model.setToastHovered)
-                    .padding(.bottom, 72)
-            }
-        }
     }
 }
 
@@ -133,94 +111,5 @@ private struct LoadingOverlay: View {
             .padding(28)
         }
         .transition(.opacity)
-    }
-}
-
-private struct ToastView: View {
-    let toast: Toast
-    let onDismiss: () -> Void
-    let onHover: (Bool) -> Void
-
-    var body: some View {
-        HStack(spacing: 11) {
-            if let thumbnail = toast.thumbnail {
-                Image(nsImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 48, height: 32)
-                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(.white, lineWidth: 1.5)
-                    }
-                    .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
-                    .rotationEffect(.degrees(-5))
-                    .overlay(alignment: .bottomTrailing) {
-                        Image(systemName: toast.systemImage)
-                            .font(.system(size: 13, weight: .bold))
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.accentColor)
-                            .background(Circle().fill(.white).padding(2))
-                            .offset(x: 6, y: 5)
-                    }
-            } else {
-                Image(systemName: toast.systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.tint)
-            }
-
-            Text(toast.message)
-                .font(.callout.weight(.medium))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: 340, alignment: .leading)
-
-            if let url = toast.revealURL {
-                Button("Show in Finder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([url])
-                    onDismiss()
-                }
-                // A plain tinted button: no glass inside the glass capsule.
-                .buttonStyle(.borderless)
-                .foregroundStyle(.tint)
-                .fontWeight(.semibold)
-                .controlSize(.small)
-                .fixedSize()
-            }
-        }
-        .padding(.leading, toast.thumbnail == nil ? 15 : 10)
-        .padding(.trailing, toast.revealURL == nil ? 16 : 7)
-        .padding(.vertical, 7)
-        .frame(minHeight: 44)
-        .fixedSize(horizontal: false, vertical: true)
-        .glassEffect(.regular, in: .capsule)
-        .onHover(perform: onHover)
-        .modifier(HugContentWidth())
-        .padding(.horizontal, 20)
-    }
-}
-
-/// Sizes a view to its natural width, but never wider than its container offers,
-/// so a long message truncates instead of stretching the window's layout.
-private struct HugContentWidth: ViewModifier {
-    func body(content: Content) -> some View {
-        HugContentWidthLayout { content }
-    }
-}
-
-private struct HugContentWidthLayout: Layout {
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard let subview = subviews.first else { return .zero }
-        let ideal = subview.sizeThatFits(.unspecified)
-        let width = min(ideal.width, proposal.width ?? ideal.width)
-        return subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        subviews.first?.place(
-            at: CGPoint(x: bounds.midX, y: bounds.midY),
-            anchor: .center,
-            proposal: ProposedViewSize(width: bounds.width, height: bounds.height)
-        )
     }
 }

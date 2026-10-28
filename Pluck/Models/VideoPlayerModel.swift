@@ -1,7 +1,7 @@
-import Accessibility
 import AppKit
 import AVFoundation
 import Combine
+import DMKit
 import Observation
 import UniformTypeIdentifiers
 
@@ -20,7 +20,8 @@ final class VideoPlayerModel {
     private(set) var presentationID = UUID()
     private(set) var frameOperation: FrameOperation?
     var alert: PlayerAlert?
-    private(set) var toast: Toast?
+    /// What just happened, shown in the window's status capsule.
+    var status: StatusMessage?
     private(set) var captureFlight: CaptureFlight?
     private(set) var completedOperation: FrameOperation?
     private(set) var videoDimensions: CGSize = .zero
@@ -43,7 +44,6 @@ final class VideoPlayerModel {
     @ObservationIgnored private var rateBeforeScrub: Float = 0
     @ObservationIgnored private var manualShuttleTask: Task<Void, Never>?
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    @ObservationIgnored private var toastTask: Task<Void, Never>?
     @ObservationIgnored private var completionTask: Task<Void, Never>?
     @ObservationIgnored private var previewGenerator: PreviewFrameGenerator?
     @ObservationIgnored private var previewCache: [Int: CGImage] = [:]
@@ -156,7 +156,7 @@ final class VideoPlayerModel {
         if zone != .off {
             UserDefaults.standard.set(zone.rawValue, forKey: PreferenceKey.lastSafeZone)
         }
-        showToast(zone == .off ? "Safe zone off" : "\(zone.title) safe zone", systemImage: zone == .off ? "eye.slash.fill" : "rectangle.dashed")
+        status = StatusMessage(zone == .off ? "Safe zone off" : "\(zone.title) safe zone")
     }
 
     func open(url: URL) {
@@ -562,17 +562,18 @@ final class VideoPlayerModel {
                 case .save:
                     if let savedURL = try await self.save(image: capturedImage, videoURL: videoURL, seconds: captureSeconds) {
                         self.celebrate(operation, thumbnail: thumbnail)
-                        self.showToast(
-                            "Saved \(savedURL.lastPathComponent)",
-                            systemImage: "checkmark.circle.fill",
-                            thumbnail: thumbnail,
-                            revealURL: savedURL
+                        // TODO(DMKit): StatusMessage has no leading image, so the frame's thumbnail no longer shows here.
+                        self.status = StatusMessage(
+                            "Saved “\(savedURL.lastPathComponent)”",
+                            action: .init("Show in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([savedURL])
+                            }
                         )
                     }
                 case .copy:
                     try self.copy(image: capturedImage)
                     self.celebrate(operation, thumbnail: thumbnail)
-                    self.showToast("Copied to clipboard", systemImage: "doc.on.clipboard.fill", thumbnail: thumbnail)
+                    self.status = StatusMessage("Copied to clipboard")
                 }
                 self.frameOperation = nil
             } catch {
@@ -659,43 +660,6 @@ final class VideoPlayerModel {
         }
         return proposed
     }
-
-    private func showToast(
-        _ message: String,
-        systemImage: String = "checkmark.circle.fill",
-        thumbnail: NSImage? = nil,
-        revealURL: URL? = nil
-    ) {
-        let newToast = Toast(message: message, systemImage: systemImage, thumbnail: thumbnail, revealURL: revealURL)
-        toast = newToast
-        AccessibilityNotification.Announcement(message).post()
-        scheduleToastDismissal(of: newToast)
-    }
-
-    /// Holds the toast while the pointer is over it, and restarts its timer when the pointer leaves.
-    func setToastHovered(_ isHovered: Bool) {
-        guard let toast else { return }
-        if isHovered {
-            toastTask?.cancel()
-        } else {
-            scheduleToastDismissal(of: toast)
-        }
-    }
-
-    private func scheduleToastDismissal(of toast: Toast) {
-        toastTask?.cancel()
-        toastTask = Task { [weak self] in
-            // Leave actionable toasts up long enough to reach the button.
-            try? await Task.sleep(for: .seconds(toast.revealURL == nil ? 4 : 4.5))
-            guard !Task.isCancelled, self?.toast?.id == toast.id else { return }
-            self?.toast = nil
-        }
-    }
-
-    func dismissToast() {
-        toastTask?.cancel()
-        toast = nil
-    }
 }
 
 enum FrameOperation {
@@ -707,16 +671,6 @@ enum FrameOperation {
 struct PlayerAlert {
     let title: String
     let message: String
-}
-
-struct Toast: Identifiable, Equatable {
-    let id = UUID()
-    let message: String
-    let systemImage: String
-    let thumbnail: NSImage?
-    let revealURL: URL?
-
-    static func == (lhs: Toast, rhs: Toast) -> Bool { lhs.id == rhs.id }
 }
 
 struct CaptureFlight: Identifiable, Equatable {
