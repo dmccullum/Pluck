@@ -149,14 +149,3 @@ nonisolated enum FrameRendererError: LocalizedError {
         "The image could not be encoded in the selected format."
     }
 }
-
-extension NSSavePanel {
-    /// Shows the panel as a sheet on `window`, or app-modally when there's no window to attach to.
-    func present(in window: NSWindow?) async -> URL? {
-        guard let window else {
-            return runModal() == .OK ? url : nil
-        }
-        let response = await beginSheetModal(for: window)
-        return response == .OK ? url : nil
-    }
-}

@@ -97,9 +97,8 @@ final class VideoPlayerModel {
     func presentOpenPanel() {
         let panel = Self.makeOpenPanel()
         Task {
-            if let url = await panel.present(in: window) {
-                requestOpen(url: url)
-            }
+            guard await panel.present(in: window) == .OK, let url = panel.url else { return }
+            requestOpen(url: url)
         }
     }
 
@@ -621,7 +620,7 @@ final class VideoPlayerModel {
             panel.nameFieldStringValue = filename
             panel.allowedContentTypes = [format.contentType]
             panel.canCreateDirectories = true
-            guard let selectedURL = await panel.present(in: window) else {
+            guard await panel.present(in: window) == .OK, let selectedURL = panel.url else {
                 return nil
             }
             outputURL = selectedURL

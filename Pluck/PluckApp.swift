@@ -21,6 +21,7 @@ struct PluckApp: App {
 
         Settings {
             SettingsView()
+                .providesHostingWindow()
         }
 
         AboutScene(links: AboutLinks(sourceCode: URL(string: "https://github.com/dmccullum/Pluck"))) {
@@ -308,10 +309,10 @@ private struct VideoDocumentCommands: Commands {
 
     /// With no video window to attach a sheet to, runs the panel app-modally.
     private func openVideoInNewWindow() {
+        let panel = VideoPlayerModel.makeOpenPanel()
         Task {
-            if let url = await VideoPlayerModel.makeOpenPanel().present(in: nil) {
-                openWindow(value: VideoReference(url: url))
-            }
+            guard await panel.present(in: nil) == .OK, let url = panel.url else { return }
+            openWindow(value: VideoReference(url: url))
         }
     }
 

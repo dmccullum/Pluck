@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -6,6 +7,7 @@ struct SettingsView: View {
     @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
     @AppStorage(PreferenceKey.jpegQuality) private var jpegQuality = 0.9
     @AppStorage(PreferenceKey.folderDisplayPath) private var folderDisplayPath = ""
+    @Environment(\.hostingWindow) private var window
 
     var body: some View {
         Form {
@@ -63,7 +65,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 500)
+        .frame(width: DMLayout.settingsWidth)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 8)
         .onChange(of: saveDestination) { _, newValue in
@@ -83,7 +85,7 @@ struct SettingsView: View {
         panel.allowsMultipleSelection = false
 
         Task {
-            if let folderURL = await panel.present(in: NSApp.keyWindow) {
+            if await panel.present(in: window) == .OK, let folderURL = panel.url {
                 do {
                     try FolderBookmarkStore.save(folderURL)
                     folderDisplayPath = folderURL.path
