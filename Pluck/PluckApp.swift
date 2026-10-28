@@ -155,7 +155,6 @@ private extension FocusedValues {
 
 private struct VideoDocumentCommands: Commands {
     @FocusedValue(\.videoDocumentActions) private var actions
-    var recents = RecentVideos.shared
     @Environment(\.openWindow) private var openWindow
     @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
     @AppStorage(PreferenceKey.timeDisplay) private var timeDisplay = TimeDisplay.timecode.rawValue
@@ -172,19 +171,8 @@ private struct VideoDocumentCommands: Commands {
             }
             .keyboardShortcut("o", modifiers: .command)
 
-            Menu("Open Recent") {
-                ForEach(recents.videos, id: \.self) { video in
-                    Button(video.url.lastPathComponent) {
-                        openRecent(video)
-                    }
-                }
-                if !recents.videos.isEmpty {
-                    Divider()
-                }
-                Button("Clear Menu") {
-                    recents.clear()
-                }
-                .disabled(recents.videos.isEmpty)
+            OpenRecentMenu(recents: .videos) { url in
+                openRecent(url)
             }
         }
 
@@ -316,12 +304,14 @@ private struct VideoDocumentCommands: Commands {
         }
     }
 
-    private func openRecent(_ video: VideoReference) {
-        // An empty window opens it in place; otherwise the new window resolves the bookmark itself.
+    private func openRecent(_ url: URL) {
+        // An empty window opens it in place; otherwise a new window gets a fresh bookmark to it.
         if let actions, !actions.hasVideo {
-            actions.openURL(video.resolve())
+            actions.openURL(url)
         } else {
-            openWindow(value: video)
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+            openWindow(value: VideoReference(url: url))
         }
     }
 }

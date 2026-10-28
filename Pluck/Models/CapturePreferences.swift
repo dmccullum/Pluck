@@ -1,4 +1,5 @@
 import AppKit
+import DMKit
 import Foundation
 import UniformTypeIdentifiers
 
@@ -196,7 +197,7 @@ nonisolated enum SafeZone: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// A video file plus a security-scoped bookmark to it, so a sandboxed relaunch can open
-/// it again. Video windows are keyed by this for state restoration, and Open Recent lists them.
+/// it again. Video windows are keyed by this for state restoration.
 nonisolated struct VideoReference: Codable, Hashable, Sendable {
     let url: URL
     let bookmark: Data?
@@ -232,34 +233,8 @@ nonisolated struct VideoReference: Codable, Hashable, Sendable {
     }
 }
 
-/// The File > Open Recent list, newest first. Also feeds the Dock menu's recent items.
-@Observable
-final class RecentVideos {
-    static let shared = RecentVideos()
-    private static let limit = 10
-
-    private(set) var videos: [VideoReference]
-
-    private init() {
-        let data = UserDefaults.standard.data(forKey: PreferenceKey.recentVideos)
-        videos = data.flatMap { try? JSONDecoder().decode([VideoReference].self, from: $0) } ?? []
-    }
-
-    func note(_ url: URL) {
-        NSDocumentController.shared.noteNewRecentDocumentURL(url)
-        videos.removeAll { $0.url == url }
-        videos.insert(VideoReference(url: url), at: 0)
-        videos = Array(videos.prefix(Self.limit))
-        save()
-    }
-
-    func clear() {
-        NSDocumentController.shared.clearRecentDocuments(nil)
-        videos = []
-        save()
-    }
-
-    private func save() {
-        UserDefaults.standard.set(try? JSONEncoder().encode(videos), forKey: PreferenceKey.recentVideos)
-    }
+extension RecentItems {
+    /// File › Open Recent. Stored under the key the app's own list used, in the same format,
+    /// so existing recents carry over.
+    static let videos = RecentItems(key: PreferenceKey.recentVideos)
 }

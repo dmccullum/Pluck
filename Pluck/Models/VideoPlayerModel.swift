@@ -250,7 +250,7 @@ final class VideoPlayerModel {
             securityScopedURL = url
             pendingScopedURL = nil
         }
-        RecentVideos.shared.note(url)
+        RecentItems.videos.note(url)
 
         self.asset = asset
         self.videoURL = url
