@@ -2,17 +2,15 @@ import SwiftUI
 
 @main
 struct PluckApp: App {
-    @State private var windowState = AppWindowState()
-
     var body: some Scene {
         WindowGroup("Pluck", id: "main", for: VideoReference.self) { $reference in
-            VideoDocumentWindow(reference: $reference, windowState: windowState)
+            VideoDocumentWindow(reference: $reference)
         }
         .defaultSize(width: 480, height: 480)
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
-            VideoDocumentCommands(windowState: windowState)
+            VideoDocumentCommands()
         }
 
         Settings {
@@ -33,12 +31,8 @@ struct PluckApp: App {
 private struct VideoDocumentWindow: View {
     /// The window's restorable value: nil for an empty window until it opens a video.
     @Binding var reference: VideoReference?
-    var windowState: AppWindowState
 
     @State private var model = VideoPlayerModel()
-    @State private var windowIdentity = UUID()
-    /// Whether this window started empty, captured once so opening a video doesn't change it.
-    @State private var isMainWindow: Bool?
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -70,12 +64,6 @@ private struct VideoDocumentWindow: View {
                 }
             }
             .onAppear {
-                if isMainWindow == nil {
-                    isMainWindow = reference == nil
-                }
-                if isMainWindow == true {
-                    windowState.setMainWindow(id: windowIdentity, visible: true)
-                }
                 model.documentOpener = { [model] url in
                     open(url, in: model)
                 }
@@ -83,9 +71,6 @@ private struct VideoDocumentWindow: View {
             .onDisappear {
                 model.stopPlayback()
                 model.documentOpener = nil
-                if isMainWindow == true {
-                    windowState.setMainWindow(id: windowIdentity, visible: false)
-                }
             }
             .onOpenURL { url in
                 open(url, in: model)
@@ -124,23 +109,6 @@ private struct VideoDocumentWindow: View {
     }
 }
 
-@Observable
-private final class AppWindowState {
-    private var visibleMainWindowIDs: Set<UUID> = []
-
-    var isMainWindowVisible: Bool {
-        !visibleMainWindowIDs.isEmpty
-    }
-
-    func setMainWindow(id: UUID, visible: Bool) {
-        if visible {
-            visibleMainWindowIDs.insert(id)
-        } else {
-            visibleMainWindowIDs.remove(id)
-        }
-    }
-}
-
 private struct VideoDocumentActions {
     let openVideo: () -> Void
     let openURL: (URL) -> Void
@@ -173,7 +141,6 @@ private extension FocusedValues {
 
 private struct VideoDocumentCommands: Commands {
     @FocusedValue(\.videoDocumentActions) private var actions
-    var windowState: AppWindowState
     var recents = RecentVideos.shared
     @Environment(\.openWindow) private var openWindow
 
@@ -294,17 +261,6 @@ private struct VideoDocumentCommands: Commands {
             }
             .keyboardShortcut(.end, modifiers: [])
             .disabled(actions?.hasVideo != true)
-        }
-
-        CommandGroup(before: .windowList) {
-            if !windowState.isMainWindowVisible {
-                Button("Pluck") {
-                    openWindow(id: "main")
-                }
-                .keyboardShortcut("0", modifiers: .command)
-
-                Divider()
-            }
         }
     }
 
