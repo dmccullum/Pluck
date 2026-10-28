@@ -103,8 +103,14 @@ private struct VideoDocumentWindow: View {
             jumpForward: { model.seekBy(5) },
             goToStart: model.seekToStart,
             goToEnd: model.seekToEnd,
+            showInFinder: model.showVideoInFinder,
+            setSafeZone: model.setSafeZone,
+            setIncludesSafeZoneInCaptures: model.setIncludesSafeZoneInCaptures,
             hasVideo: model.hasVideo,
-            isCapturing: model.isCapturing
+            isCapturing: model.isCapturing,
+            supportsSafeZone: model.supportsSafeZone,
+            safeZone: model.safeZone,
+            includesSafeZoneInCaptures: model.includesSafeZoneInCaptures
         )
     }
 }
@@ -124,8 +130,14 @@ private struct VideoDocumentActions {
     let jumpForward: () -> Void
     let goToStart: () -> Void
     let goToEnd: () -> Void
+    let showInFinder: () -> Void
+    let setSafeZone: (SafeZone) -> Void
+    let setIncludesSafeZoneInCaptures: (Bool) -> Void
     let hasVideo: Bool
     let isCapturing: Bool
+    let supportsSafeZone: Bool
+    let safeZone: SafeZone
+    let includesSafeZoneInCaptures: Bool
 }
 
 private struct VideoDocumentActionsKey: FocusedValueKey {
@@ -143,6 +155,8 @@ private struct VideoDocumentCommands: Commands {
     @FocusedValue(\.videoDocumentActions) private var actions
     var recents = RecentVideos.shared
     @Environment(\.openWindow) private var openWindow
+    @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
+    @AppStorage(PreferenceKey.timeDisplay) private var timeDisplay = TimeDisplay.timecode.rawValue
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -179,11 +193,19 @@ private struct VideoDocumentCommands: Commands {
         }
 
         CommandGroup(after: .saveItem) {
-            Button("Save Frame") {
+            Button(SaveDestination.saveFrameTitle(forRawValue: saveDestination)) {
                 actions?.captureFrame()
             }
             .keyboardShortcut("s", modifiers: .command)
             .disabled(actions?.hasVideo != true || actions?.isCapturing == true)
+
+            Divider()
+
+            Button("Show Video in Finder") {
+                actions?.showInFinder()
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(actions?.hasVideo != true)
         }
 
         // The windows have no text to edit, so Copy copies the frame and the other edit items go.
@@ -193,6 +215,31 @@ private struct VideoDocumentCommands: Commands {
             }
             .keyboardShortcut("c", modifiers: .command)
             .disabled(actions?.hasVideo != true || actions?.isCapturing == true)
+        }
+
+        CommandGroup(before: .toolbar) {
+            SafeZonePicker(selection: Binding(
+                get: { actions?.safeZone ?? .off },
+                set: { actions?.setSafeZone($0) }
+            ))
+            .disabled(actions?.supportsSafeZone != true)
+
+            Toggle("Include Safe Zone in Saved Frames", isOn: Binding(
+                get: { actions?.includesSafeZoneInCaptures == true },
+                set: { actions?.setIncludesSafeZoneInCaptures($0) }
+            ))
+            .disabled(actions?.supportsSafeZone != true || actions?.safeZone == .off)
+
+            Divider()
+
+            Picker("Time Display", selection: $timeDisplay) {
+                ForEach(TimeDisplay.allCases, id: \.self) { display in
+                    Text(display.title).tag(display.rawValue)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Divider()
         }
 
         CommandMenu("Playback") {

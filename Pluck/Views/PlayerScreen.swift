@@ -349,6 +349,7 @@ private final class PointerTrackingNSView: NSView {
 private struct VideoCanvas: View {
     var model: VideoPlayerModel
     let player: AVPlayer
+    @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
 
     var body: some View {
         GeometryReader { proxy in
@@ -367,6 +368,46 @@ private struct VideoCanvas: View {
             .clipped()
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("Copy Frame") {
+                model.copyCurrentFrame()
+            }
+            .disabled(model.isCapturing)
+
+            Button(SaveDestination.saveFrameTitle(forRawValue: saveDestination)) {
+                model.captureCurrentFrame()
+            }
+            .disabled(model.isCapturing)
+
+            Divider()
+
+            SafeZonePicker(selection: Binding(
+                get: { model.safeZone },
+                set: { model.setSafeZone($0) }
+            ))
+            .disabled(!model.supportsSafeZone)
+
+            Divider()
+
+            Button("Show Video in Finder") {
+                model.showVideoInFinder()
+            }
+        }
+    }
+}
+
+/// The Safe Zone submenu, shared by the View menu and the video's context menu.
+struct SafeZonePicker: View {
+    @Binding var selection: SafeZone
+
+    var body: some View {
+        Picker("Safe Zone", selection: $selection) {
+            ForEach(SafeZone.allCases) { zone in
+                Text(zone.menuTitle).tag(zone)
+            }
+        }
+        .pickerStyle(.menu)
     }
 }
 
@@ -663,13 +704,14 @@ private struct FrameActionButtons: View {
 private struct FrameActionButton: View {
     var model: VideoPlayerModel
     let operation: FrameOperation
+    @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
 
     private var isWorking: Bool {
         operation == .copy ? model.isCopyingFrame : model.isSavingFrame
     }
 
     private var title: String {
-        operation == .copy ? "Copy Frame" : "Save Frame"
+        operation == .copy ? "Copy Frame" : SaveDestination.saveFrameTitle(forRawValue: saveDestination)
     }
 
     private var isDone: Bool {

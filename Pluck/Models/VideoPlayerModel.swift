@@ -124,6 +124,11 @@ final class VideoPlayerModel {
         return true
     }
 
+    func showVideoInFinder() {
+        guard let videoURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([videoURL])
+    }
+
     func setIncludesSafeZoneInCaptures(_ included: Bool) {
         includesSafeZoneInCaptures = included
         UserDefaults.standard.set(included, forKey: PreferenceKey.safeZoneInCaptures)

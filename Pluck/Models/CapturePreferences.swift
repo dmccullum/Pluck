@@ -57,6 +57,15 @@ enum SaveDestination: String, CaseIterable, Identifiable {
         case .chosenFolder: "Chosen folder"
         }
     }
+
+    /// Save Frame takes an ellipsis when it will show a save panel.
+    var saveFrameTitle: String {
+        self == .askEveryTime ? "Save Frame…" : "Save Frame"
+    }
+
+    static func saveFrameTitle(forRawValue rawValue: String) -> String {
+        (SaveDestination(rawValue: rawValue) ?? .askEveryTime).saveFrameTitle
+    }
 }
 
 enum PreferenceKey {
@@ -156,6 +165,15 @@ nonisolated enum SafeZone: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .off: "Off"
         case .reels: "Reels"
+        case .metaAds: "Meta Ads"
+        }
+    }
+
+    /// The fuller name used in menus, which have room for it.
+    var menuTitle: String {
+        switch self {
+        case .off: "Off"
+        case .reels: "Instagram Reels"
         case .metaAds: "Meta Ads"
         }
     }

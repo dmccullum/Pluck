@@ -17,10 +17,10 @@
 - Step one source frame at a time with the arrow keys, comma and period, or K+J / K+L.
 - Save the current frame with <kbd>⌘S</kbd> or copy it with <kbd>⌘C</kbd>. Formats: PNG, JPEG, HEIC, TIFF.
 - Hover over the timeline to preview the frame under the pointer.
-- Show Instagram Reels or Meta ads safe zone guides on 9:16 videos, and optionally include them in saved and copied frames.
+- Show Instagram Reels or Meta ads safe zone guides on 9:16 videos from View › Safe Zone, the safe zone button, or the video's context menu, and optionally include them in saved and copied frames.
 - The title bar and controls fade out after a few seconds without pointer movement. The window resizes to the video's aspect ratio.
 - Each video opens in its own window with its own playback state.
-- Click the time to switch between timecode, frame number, and minutes and seconds.
+- Switch the time between timecode, frame number, and minutes and seconds from View › Time Display, or click the time.
 - Open a video by dropping it on the window or the app icon, with Open With, with <kbd>⌘O</kbd>, or from File › Open Recent.
 - Windows reopen with their videos after you quit and relaunch.
 - The Shortcuts action Extract Frame from Video takes a video, a time in seconds, and a format, and returns the frame as an image.
@@ -56,6 +56,7 @@ Pluck uses only Apple frameworks: SwiftUI, AppKit, AVFoundation, AppIntents, and
 | Go to start / end | <kbd>Home</kbd> / <kbd>End</kbd> |
 | Save frame | <kbd>⌘S</kbd> |
 | Copy frame | <kbd>⌘C</kbd> |
+| Show video in Finder | <kbd>⇧⌘R</kbd> |
 | Settings | <kbd>⌘,</kbd> |
 
 Command-click the safe zone button to turn the guide on or off.

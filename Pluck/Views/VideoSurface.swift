@@ -37,6 +37,9 @@ final class PlayerLayerView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// Display only, so clicks reach SwiftUI (the canvas's context menu) instead of stopping here.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     override func layout() {
         super.layout()
         CATransaction.begin()
