@@ -1,3 +1,4 @@
+import DMKit
 import SwiftUI
 
 @main
@@ -17,14 +18,9 @@ struct PluckApp: App {
             SettingsView()
         }
 
-        Window("About Pluck", id: "about") {
-            AboutView()
+        AboutScene(links: AboutLinks(sourceCode: URL(string: "https://github.com/dmccullum/Pluck"))) {
+            FilmToPhotoCapsule()
         }
-        .defaultPosition(.center)
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .windowBackgroundDragBehavior(.enabled)
-        .restorationBehavior(.disabled)
     }
 }
 
@@ -159,12 +155,6 @@ private struct VideoDocumentCommands: Commands {
     @AppStorage(PreferenceKey.timeDisplay) private var timeDisplay = TimeDisplay.timecode.rawValue
 
     var body: some Commands {
-        CommandGroup(replacing: .appInfo) {
-            Button("About Pluck") {
-                openWindow(id: "about")
-            }
-        }
-
         CommandGroup(after: .newItem) {
             Divider()
             Button("Open Video…") {
