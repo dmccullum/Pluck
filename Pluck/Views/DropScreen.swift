@@ -1,3 +1,4 @@
+import DMKit
 import SwiftUI
 
 struct DropScreen: View {
@@ -41,26 +42,17 @@ struct DropScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
 
-            if isTargeted {
-                // Concentric with the window's corners, inset by the padding.
-                ConcentricRectangle(corners: .concentric(minimum: 12), isUniform: true)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, dash: [9, 6]))
-                    .background(
-                        ConcentricRectangle(corners: .concentric(minimum: 12), isUniform: true)
-                            .fill(Color.accentColor.opacity(0.06))
-                    )
-                    .padding(12)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
-
             VStack {
                 Spacer()
                 capturePill
                     .padding(.bottom, 18)
             }
         }
-        .animation(.spring(response: 0.36, dampingFraction: 0.74), value: isTargeted)
+        // The window's dropDestination (in ContentView) owns the drop, because the mark and the
+        // title react to it too, so this draws only the outline.
+        // TODO(DMKit): dropTarget(for:) reporting isTargeted would let it own the drop here.
+        .dropTargetOutline(isTargeted)
+        .dmAnimation(.spring, value: isTargeted)
         .task {
             guard !reduceMotion else {
                 hasAppeared = true
