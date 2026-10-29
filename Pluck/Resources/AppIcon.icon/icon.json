@@ -3,8 +3,8 @@
     {
       "value": {
         "linear-gradient": [
-          "display-p3:0.26667,0.82353,0.83922,1.00000",
-          "display-p3:0.03137,0.49804,0.54902,1.00000"
+          "display-p3:0.05882,0.67451,0.84314,1.00000",
+          "display-p3:0.05490,0.45490,0.56471,1.00000"
         ],
         "orientation": {
           "start": {
@@ -22,8 +22,8 @@
       "appearance": "dark",
       "value": {
         "linear-gradient": [
-          "display-p3:0.03922,0.17255,0.18824,1.00000",
-          "display-p3:0.05882,0.32157,0.35294,1.00000"
+          "display-p3:0.01176,0.10196,0.12549,1.00000",
+          "display-p3:0.03529,0.27843,0.34510,1.00000"
         ],
         "orientation": {
           "start": {
@@ -83,7 +83,7 @@
             {
               "appearance": "tinted",
               "value": {
-                "solid": "srgb:0.27451,0.27451,0.27451,1.00000"
+                "solid": "srgb:0.27000,0.27000,0.27000,1.00000"
               }
             }
           ]
@@ -113,7 +113,7 @@
             {
               "appearance": "tinted",
               "value": {
-                "solid": "srgb:0.92157,0.92157,0.92157,1.00000"
+                "solid": "srgb:0.92000,0.92000,0.92000,1.00000"
               }
             }
           ]
@@ -125,7 +125,7 @@
             "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
           },
           "glass": true,
-          "opacity": 0.95
+          "opacity": 0.7
         }
       ],
       "lighting": "combined",
@@ -136,7 +136,7 @@
       },
       "translucency": {
         "enabled": true,
-        "value": 0.12
+        "value": 0.25
       }
     },
     {
@@ -148,8 +148,27 @@
             {
               "value": {
                 "linear-gradient": [
-                  "display-p3:1.00000,0.88627,0.76078,1.00000",
-                  "display-p3:1.00000,0.69020,0.54118,1.00000"
+                  "display-p3:0.05490,0.45490,0.56471,1.00000",
+                  "display-p3:0.03922,0.33725,0.41961,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 1
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "linear-gradient": [
+                  "display-p3:0.10196,0.54118,0.63529,1.00000",
+                  "display-p3:0.07451,0.39608,0.46275,1.00000"
                 ],
                 "orientation": {
                   "start": {
@@ -166,7 +185,7 @@
             {
               "appearance": "tinted",
               "value": {
-                "solid": "srgb:0.47059,0.47059,0.47059,1.00000"
+                "solid": "srgb:0.47000,0.47000,0.47000,1.00000"
               }
             }
           ]
@@ -177,22 +196,23 @@
           "fill-specializations": [
             {
               "value": {
-                "solid": "display-p3:0.05098,0.11765,0.12941,1.00000"
+                "solid": "display-p3:0.02745,0.12549,0.14902,0.85000"
               }
             },
             {
               "appearance": "dark",
               "value": {
-                "solid": "display-p3:0.14510,0.28235,0.29804,1.00000"
+                "solid": "display-p3:0.07451,0.17647,0.20784,1.00000"
               }
             },
             {
               "appearance": "tinted",
               "value": {
-                "solid": "srgb:0.72549,0.72549,0.72549,1.00000"
+                "solid": "srgb:0.73000,0.73000,0.73000,1.00000"
               }
             }
-          ]
+          ],
+          "glass": true
         }
       ],
       "lighting": "combined",
@@ -203,7 +223,7 @@
       },
       "translucency": {
         "enabled": true,
-        "value": 0.15
+        "value": 0.22
       },
       "blur-material": 0.3
     }
