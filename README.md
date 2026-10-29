@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" width="420" alt="Pluck playing a vertical video with the Reels safe zone guide">
+  <img src="docs/screenshot.png" width="420" alt="Pluck playing a vertical video with the Reels safe zone guide, above its playback controls and scrubber">
 </p>
 
 ## Features
