@@ -125,7 +125,7 @@ struct AboutFilmstrip: View {
             .accessibilityAction(named: "Pluck Frame") { reel.pluck() }
     }
 
-    /// The HUD scrubber in miniature: sunset fill up to a white knob over the current frame.
+    /// The HUD scrubber in miniature: accent fill up to a white knob over the current frame.
     private var scrubber: some View {
         let knobX = Layout.cellCenter(reel.frame).x
         let trackWidth = Layout.width - Layout.inset * 2
@@ -134,7 +134,7 @@ struct AboutFilmstrip: View {
                 .fill(.primary.opacity(increasedContrast ? 0.3 : 0.14))
                 .frame(width: trackWidth, height: 4)
             Capsule()
-                .fill(Brand.sunsetHorizontal)
+                .fill(Color.accentColor)
                 .frame(width: knobX - Layout.inset, height: 4)
             Circle()
                 .fill(.white)

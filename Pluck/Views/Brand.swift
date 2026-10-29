@@ -14,7 +14,6 @@ enum Brand {
     static let film = p3(34, 18, 15)
 
     static let sunset = LinearGradient(colors: [sunsetTop, sunsetBottom], startPoint: .top, endPoint: .bottom)
-    static let sunsetHorizontal = LinearGradient(colors: [sunsetTop, sunsetBottom], startPoint: .leading, endPoint: .trailing)
     static let mountains = LinearGradient(colors: [mountainTop, mountainBottom], startPoint: .top, endPoint: .bottom)
 
     private static func p3(_ red: Double, _ green: Double, _ blue: Double) -> Color {

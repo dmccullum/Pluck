@@ -52,7 +52,7 @@ struct Scrubber: View {
                 }
 
                 Capsule()
-                    .fill(Brand.sunsetHorizontal)
+                    .fill(Color.accentColor)
                     .frame(width: max(trackHeight, width * progress), height: trackHeight)
 
                 Circle()
