@@ -3,6 +3,7 @@ import AVFoundation
 import Combine
 import DMKit
 import Observation
+import SwiftUI
 import UniformTypeIdentifiers
 
 @Observable
@@ -561,9 +562,9 @@ final class VideoPlayerModel {
                 case .save:
                     if let savedURL = try await self.save(image: capturedImage, videoURL: videoURL, seconds: captureSeconds) {
                         self.celebrate(operation, thumbnail: thumbnail)
-                        // TODO(DMKit): StatusMessage has no leading image, so the frame's thumbnail no longer shows here.
                         self.status = StatusMessage(
                             "Saved “\(savedURL.lastPathComponent)”",
+                            leading: .thumbnail(thumbnail),
                             action: .init("Show in Finder") {
                                 NSWorkspace.shared.activateFileViewerSelecting([savedURL])
                             }
@@ -572,7 +573,7 @@ final class VideoPlayerModel {
                 case .copy:
                     try self.copy(image: capturedImage)
                     self.celebrate(operation, thumbnail: thumbnail)
-                    self.status = StatusMessage("Copied to clipboard")
+                    self.status = StatusMessage("Copied to clipboard", leading: .image(Image(systemName: "doc.on.clipboard")))
                 }
                 self.frameOperation = nil
             } catch {
