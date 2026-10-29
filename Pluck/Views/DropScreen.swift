@@ -3,7 +3,7 @@ import SwiftUI
 
 struct DropScreen: View {
     var model: VideoPlayerModel
-    let isTargeted: Bool
+    @State private var isTargeted = false
     @Environment(\.openSettings) private var openSettings
     @AppStorage(PreferenceKey.captureFormat) private var captureFormat = CaptureFormat.png.rawValue
     @AppStorage(PreferenceKey.saveDestination) private var saveDestination = SaveDestination.askEveryTime.rawValue
@@ -48,11 +48,10 @@ struct DropScreen: View {
                     .padding(.bottom, 18)
             }
         }
-        // The window's dropDestination (in ContentView) owns the drop, because the mark and the
-        // title react to it too, so this draws only the outline.
-        // TODO(DMKit): dropTarget(for:) reporting isTargeted would let it own the drop here.
-        .dropTargetOutline(isTargeted)
         .dmAnimation(.spring, value: isTargeted)
+        .dropTarget(for: URL.self, isTargeted: $isTargeted) { urls, _ in
+            model.handleDrop(urls: urls)
+        }
         .task {
             guard !reduceMotion else {
                 hasAppeared = true

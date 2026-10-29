@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Bindable var model: VideoPlayerModel
-    @State private var isDropTargeted = false
 
     var body: some View {
         ZStack {
@@ -17,10 +16,14 @@ struct ContentView: View {
                    let player = model.player {
                     PlayerScreen(model: model, player: player)
                         .transition(.opacity)
+                        // A video dropped on the player replaces it. The drop screen takes its own drops.
+                        .dropDestination(for: URL.self) { urls, _ in
+                            model.handleDrop(urls: urls)
+                        }
                 } else if model.hasVideo {
                     Color.clear
                 } else {
-                    DropScreen(model: model, isTargeted: isDropTargeted)
+                    DropScreen(model: model)
                 }
             }
 
@@ -37,11 +40,6 @@ struct ContentView: View {
             minHeight: minimumContentSize.height,
             idealHeight: model.hasVideo ? 700 : 400
         )
-        .dropDestination(for: URL.self) { urls, _ in
-            model.handleDrop(urls: urls)
-        } isTargeted: { targeted in
-            isDropTargeted = targeted
-        }
         .alert(model.alert?.title ?? "", isPresented: Binding(
             get: { model.alert != nil },
             set: { if !$0 { model.alert = nil } }
