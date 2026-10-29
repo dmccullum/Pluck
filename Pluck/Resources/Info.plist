@@ -40,11 +40,13 @@
 	<string>public.app-category.photo-video</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSAccentColorName</key>
+	<string>AccentColor</string>
 	<key>NSHighResolutionCapable</key>
-	<true/>
-	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Daniel McCullum. Licensed under GPL-3.0.</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
 </dict>
 </plist>
