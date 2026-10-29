@@ -5,13 +5,13 @@ import SwiftUI
 enum Brand {
     static let skyTop = p3(96, 200, 255)
     static let skyBottom = p3(24, 80, 220)
-    static let frameTop = p3(255, 226, 194)
-    static let frameBottom = p3(255, 176, 138)
+    static let frameTop = p3(14, 116, 144)
+    static let frameBottom = p3(10, 86, 107)
     static let sunsetTop = p3(255, 196, 64)
     static let sunsetBottom = p3(250, 102, 74)
     static let mountainTop = p3(138, 42, 82)
     static let mountainBottom = p3(67, 16, 44)
-    static let film = p3(34, 18, 15)
+    static let film = p3(8, 35, 43)
 
     static let sunset = LinearGradient(colors: [sunsetTop, sunsetBottom], startPoint: .top, endPoint: .bottom)
     static let mountains = LinearGradient(colors: [mountainTop, mountainBottom], startPoint: .top, endPoint: .bottom)
@@ -21,16 +21,16 @@ enum Brand {
     }
 }
 
-/// The icon's motif as a live view: a film strip with one frame pulled out of it.
-/// `plucked` runs from 0 (frame sitting in its slot) to 1 (fully pulled out).
+/// The icon's motif as a live view: a film strip with one frame lifted out of it.
+/// `plucked` runs from 0 (frame sitting in its slot) to 1 (fully lifted out).
 struct PluckMark: View {
     var plucked: CGFloat = 1
     var size: CGFloat = 120
 
     var body: some View {
         let unit = size / 100
-        let slot = CGRect(x: 19, y: 42.5, width: 18, height: 15)
-        let pulled = CGRect(x: 40, y: 32, width: 50, height: 35)
+        let slot = CGRect(x: 26.56, y: 58.6, width: 21.9, height: 17.2)
+        let pulled = CGRect(x: 21.9, y: 17.2, width: 56.25, height: 42.2)
         let card = CGRect(
             x: slot.minX + (pulled.minX - slot.minX) * plucked,
             y: slot.minY + (pulled.minY - slot.minY) * plucked,
@@ -44,7 +44,7 @@ struct PluckMark: View {
 
             PluckedFrame(unit: unit)
                 .frame(width: card.width * unit, height: card.height * unit)
-                .rotationEffect(.degrees(7 * plucked))
+                .rotationEffect(.degrees(-6 * plucked))
                 .shadow(color: .black.opacity(0.28 * plucked), radius: 10 * unit * plucked, y: 5 * unit * plucked)
                 .position(x: card.midX * unit, y: card.midY * unit)
         }
@@ -61,31 +61,31 @@ private struct FilmStripShape: View {
                 CGRect(x: x * unit, y: y * unit, width: width * unit, height: height * unit)
             }
 
-            let strip = Path(roundedRect: rect(8, 0, 40, 100), cornerRadius: 7 * unit, style: .continuous)
+            let strip = Path(roundedRect: rect(0, 51.56, 100, 31.25), cornerRadius: 5 * unit, style: .continuous)
             context.fill(strip, with: .color(Brand.film))
 
             var holes = Path()
-            for row in stride(from: CGFloat(4), through: 92, by: 8.5) {
-                holes.addRoundedRect(in: rect(11.5, row, 4, 4.8), cornerSize: CGSize(width: 1.2 * unit, height: 1.2 * unit))
-                holes.addRoundedRect(in: rect(40.5, row, 4, 4.8), cornerSize: CGSize(width: 1.2 * unit, height: 1.2 * unit))
+            for column in stride(from: CGFloat(4.8), through: 92, by: 6.25) {
+                holes.addRoundedRect(in: rect(column, 53.5, 3.3, 2.5), cornerSize: CGSize(width: 0.9 * unit, height: 0.9 * unit))
+                holes.addRoundedRect(in: rect(column, 78.3, 3.3, 2.5), cornerSize: CGSize(width: 0.9 * unit, height: 0.9 * unit))
             }
             context.fill(holes, with: .color(.white.opacity(0.28)))
 
             var frames = Path()
-            for offset in [-40.0, -20.0, 20.0, 40.0] {
-                frames.addRoundedRect(in: rect(19, 42.5 + offset, 18, 15), cornerSize: CGSize(width: 2.4 * unit, height: 2.4 * unit))
+            for center in [12.5, 62.5, 87.5] {
+                frames.addRoundedRect(in: rect(center - 10.95, 58.6, 21.9, 17.2), cornerSize: CGSize(width: 2.4 * unit, height: 2.4 * unit))
             }
             context.fill(
                 frames,
                 with: .linearGradient(
                     Gradient(colors: [Brand.frameTop, Brand.frameBottom]),
-                    startPoint: .zero,
-                    endPoint: CGPoint(x: 0, y: canvasSize.height)
+                    startPoint: CGPoint(x: 0, y: 58.6 * unit),
+                    endPoint: CGPoint(x: 0, y: 75.8 * unit)
                 )
             )
 
             // The empty slot the frame was plucked from.
-            let slot = Path(roundedRect: rect(19, 42.5, 18, 15), cornerRadius: 2.4 * unit, style: .continuous)
+            let slot = Path(roundedRect: rect(26.56, 58.6, 21.9, 17.2), cornerRadius: 2.4 * unit, style: .continuous)
             context.stroke(slot, with: .color(.white.opacity(0.22)), style: StrokeStyle(lineWidth: 0.9 * unit, dash: [2 * unit, 1.6 * unit]))
         }
     }
