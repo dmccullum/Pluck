@@ -22,6 +22,8 @@ struct ContentView: View {
                         }
                 } else if model.hasVideo {
                     Color.clear
+                        .contentShape(Rectangle())
+                        .dropDestination(for: URL.self) { urls, _ in model.handleDrop(urls: urls) }
                 } else {
                     DropScreen(model: model)
                 }
@@ -33,6 +35,8 @@ struct ContentView: View {
         }
         // Statuses follow a capture or a safe zone change, so there's always a video under them.
         .statusCapsule($model.status, alignment: .top)
+        // Over video, Reduce Transparency turns the capsule near-black rather than window-colored.
+        .floatingGlassFallback(model.hasVideo ? .darkStage : .windowBackground)
         .animation(.easeOut(duration: 0.22), value: model.isPresentationReady)
         .frame(
             minWidth: minimumContentSize.width,
