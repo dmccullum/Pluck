@@ -11,6 +11,7 @@ struct PluckApp: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
+            AboutCommands()
             VideoDocumentCommands()
             FamilyHelpCommands(
                 help: URL(string: "https://github.com/dmccullum/Pluck#readme")!,
