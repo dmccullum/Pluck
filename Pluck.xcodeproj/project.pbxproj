@@ -18,7 +18,7 @@
 		A10000000000000000000007 /* VideoSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* VideoSurface.swift */; };
 		A10000000000000000000008 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* SettingsView.swift */; };
 		A1000000000000000000000A /* WindowAspectConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* WindowAspectConfigurator.swift */; };
-		A1000000000000000000000B /* FilmToPhotoCapsule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* FilmToPhotoCapsule.swift */; };
+		A1000000000000000000000B /* AboutFilmstrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* AboutFilmstrip.swift */; };
 		A1000000000000000000000C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* AppIcon.icon */; };
 		A1000000000000000000000D /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Brand.swift */; };
 		A1000000000000000000000E /* Scrubber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Scrubber.swift */; };
@@ -42,7 +42,7 @@
 		A2000000000000000000000B /* Pluck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Pluck.entitlements; sourceTree = "<group>"; };
 		A2000000000000000000000C /* Pluck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pluck.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000000000000000000000D /* WindowAspectConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAspectConfigurator.swift; sourceTree = "<group>"; };
-		A2000000000000000000000E /* FilmToPhotoCapsule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmToPhotoCapsule.swift; sourceTree = "<group>"; };
+		A2000000000000000000000E /* AboutFilmstrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutFilmstrip.swift; sourceTree = "<group>"; };
 		A2000000000000000000000F /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		A20000000000000000000010 /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Scrubber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scrubber.swift; sourceTree = "<group>"; };
@@ -96,7 +96,7 @@
 				A20000000000000000000010 /* Brand.swift */,
 				A20000000000000000000004 /* ContentView.swift */,
 				A20000000000000000000005 /* DropScreen.swift */,
-				A2000000000000000000000E /* FilmToPhotoCapsule.swift */,
+				A2000000000000000000000E /* AboutFilmstrip.swift */,
 				A20000000000000000000006 /* PlayerScreen.swift */,
 				A20000000000000000000011 /* Scrubber.swift */,
 				A20000000000000000000008 /* SettingsView.swift */,
@@ -202,7 +202,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000001 /* PluckApp.swift in Sources */,
-				A1000000000000000000000B /* FilmToPhotoCapsule.swift in Sources */,
+				A1000000000000000000000B /* AboutFilmstrip.swift in Sources */,
 				A1000000000000000000000D /* Brand.swift in Sources */,
 				A1000000000000000000000E /* Scrubber.swift in Sources */,
 				A10000000000000000000002 /* CapturePreferences.swift in Sources */,

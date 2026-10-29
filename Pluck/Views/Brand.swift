@@ -119,7 +119,7 @@ private struct PluckedFrame: View {
     }
 }
 
-nonisolated private struct MountainShape: Shape {
+nonisolated struct MountainShape: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height
         var path = Path()

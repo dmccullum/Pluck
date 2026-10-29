@@ -26,7 +26,7 @@ struct PluckApp: App {
         }
 
         AboutScene(links: AboutLinks(sourceCode: URL(string: "https://github.com/dmccullum/Pluck"))) {
-            FilmToPhotoCapsule()
+            AboutFilmstrip()
         }
     }
 }
