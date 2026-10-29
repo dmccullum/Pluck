@@ -13,14 +13,15 @@ struct DropScreen: View {
 
     var body: some View {
         ZStack {
-            DropBackdrop()
+            Color(nsColor: .windowBackgroundColor)
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 PluckMark(plucked: isTargeted ? 1 : (hasAppeared ? 0.82 : 0), size: 124)
                     .scaleEffect(isTargeted && !reduceMotion ? 1.08 : 1)
                     .padding(.bottom, 14)
 
-                Text(isTargeted ? "Let go to open" : "Drop a video to begin")
+                Text(isTargeted ? "Let go to open" : "Drop a video to pluck frames")
                     .font(.title2.weight(.semibold))
                     .contentTransition(.opacity)
 
@@ -112,30 +113,5 @@ struct DropScreen: View {
             return URL(fileURLWithPath: folderDisplayPath).lastPathComponent
         }
         return "Ask where to save"
-    }
-}
-
-/// A faint wash of the icon's sky and sunset behind the empty window.
-private struct DropBackdrop: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        let strength = colorScheme == .dark ? 1.4 : 1.0
-        ZStack {
-            Color(nsColor: .windowBackgroundColor)
-            RadialGradient(
-                colors: [Brand.skyTop.opacity(0.2 * strength), .clear],
-                center: .topLeading,
-                startRadius: 0,
-                endRadius: 560
-            )
-            RadialGradient(
-                colors: [Brand.sunsetBottom.opacity(0.09 * strength), .clear],
-                center: .bottomTrailing,
-                startRadius: 0,
-                endRadius: 480
-            )
-        }
-        .ignoresSafeArea()
     }
 }

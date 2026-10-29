@@ -85,14 +85,6 @@ private struct LoadingOverlay: View {
             Color(nsColor: .windowBackgroundColor)
                 .ignoresSafeArea()
 
-            RadialGradient(
-                colors: [Brand.skyTop.opacity(0.16), Brand.skyBottom.opacity(0.03), .clear],
-                center: .center,
-                startRadius: 0,
-                endRadius: 300
-            )
-            .ignoresSafeArea()
-
             VStack(spacing: 16) {
                 if reduceMotion {
                     PluckMark(plucked: 0.82, size: 84)
