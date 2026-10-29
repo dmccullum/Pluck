@@ -574,9 +574,7 @@ private extension EnvironmentValues {
     }
 }
 
-// Not a DMKit FloatingBar: the bar is a single-row capsule, and the HUD is two rows (transport
-// over time, scrubber, time) whose time labels sit in the corners a capsule would round off.
-// TODO(DMKit): FloatingBar taking a shape (or a multi-row layout) would let this adopt it.
+/// Two rows in one floating bar: the transport over the time, scrubber and time.
 private struct PlaybackHUD: View {
     var model: VideoPlayerModel
     @Environment(\.playerControlsVisible) private var controlsVisible
@@ -593,7 +591,13 @@ private struct PlaybackHUD: View {
     }
 
     var body: some View {
-        VStack(spacing: 9) {
+        FloatingBar(
+            shape: RoundedRectangle(cornerRadius: DMRadius.large, style: .continuous),
+            axis: .vertical,
+            spacing: 9,
+            padding: EdgeInsets(top: 8, leading: 16, bottom: 13, trailing: 16),
+            tint: .black.opacity(0.22)
+        ) {
             HStack(spacing: 14) {
                 HUDButton(title: "Previous Frame", systemImage: "backward.frame.fill") {
                     model.stepFrame(by: -1)
@@ -644,13 +648,8 @@ private struct PlaybackHUD: View {
             }
             .font(.system(size: 11.5, weight: .medium))
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 13)
-        .glassEffect(
-            .regular.tint(.black.opacity(0.22)),
-            in: .rect(cornerRadius: DMRadius.large)
-        )
+        // White controls over video: under Reduce Transparency the bar turns near-black, not window-colored.
+        .floatingGlassFallback(.darkStage)
         .foregroundStyle(.white)
         .opacity(controlsVisible ? 1 : 0)
         .offset(y: controlsVisible || reduceMotion ? 0 : 8)
