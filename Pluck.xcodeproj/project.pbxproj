@@ -172,7 +172,7 @@
 			);
 			mainGroup = A40000000000000000000001;
 			packageReferences = (
-				AB0000000000000000000001 /* XCLocalSwiftPackageReference "../DMKit" */,
+				AB0000000000000000000001 /* XCRemoteSwiftPackageReference "DMKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A40000000000000000000006 /* Products */;
@@ -377,12 +377,16 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		AB0000000000000000000001 /* XCLocalSwiftPackageReference "../DMKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../DMKit;
+/* Begin XCRemoteSwiftPackageReference section */
+		AB0000000000000000000001 /* XCRemoteSwiftPackageReference "DMKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/dmccullum/DMKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		AC0000000000000000000001 /* DMKit */ = {
