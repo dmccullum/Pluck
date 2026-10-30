@@ -3,8 +3,8 @@
     {
       "value": {
         "linear-gradient": [
-          "display-p3:0.05882,0.67451,0.84314,1.00000",
-          "display-p3:0.05490,0.45490,0.56471,1.00000"
+          "srgb:0.27059,0.75294,0.85098,1.0",
+          "srgb:0.17255,0.62353,0.72157,1.0"
         ],
         "orientation": {
           "start": {
@@ -167,8 +167,8 @@
               "appearance": "dark",
               "value": {
                 "linear-gradient": [
-                  "display-p3:0.10196,0.54118,0.63529,1.00000",
-                  "display-p3:0.07451,0.39608,0.46275,1.00000"
+                  "display-p3:0.02,0.16,0.20,1",
+                  "display-p3:0.01,0.11,0.14,1"
                 ],
                 "orientation": {
                   "start": {
@@ -202,7 +202,7 @@
             {
               "appearance": "dark",
               "value": {
-                "solid": "display-p3:0.07451,0.17647,0.20784,1.00000"
+                "solid": "srgb:0.42,0.62,0.66,0.92"
               }
             },
             {
@@ -226,6 +226,38 @@
         "value": 0.22
       },
       "blur-material": 0.3
+    },
+    {
+      "name": "Backdrop",
+      "specular": false,
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "layers": [
+        {
+          "name": "backdrop",
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "sky-bg.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "sky-bg-dark.png"
+            }
+          ],
+          "hidden-specializations": [
+            {
+              "value": true
+            }
+          ]
+        }
+      ]
     }
   ],
   "supported-platforms": {
